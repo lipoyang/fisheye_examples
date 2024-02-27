@@ -27,12 +27,8 @@ void setup() {
 void draw() {
   // マウス座標をレンズの中心とする
   if(mousePressed){
-    x0 = mouseX;
-    y0 = mouseY;
-    if (x0 <  0) x0 = 0;
-    if (x0 >= W) x0 = W - 1;
-    if (y0 <  0) y0 = 0;
-    if (y0 >= H) y0 = H - 1;
+    x0 = constrain(mouseX, 0, W - 1);
+    y0 = constrain(mouseY, 0, H - 1);
   }
 
   // 写像前の座標

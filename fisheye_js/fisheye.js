@@ -13,7 +13,6 @@ const dstContext = dstCanvas.getContext('2d');
 
 const BLACK = [0, 0, 0, 255]; // 黒色
 let x0_prev, y0_prev; // レンズの中心座標の前回値
-let mouse_isDown = false; // マウス押下中フラグ
 let W2, H2; // 表示サイズ (画像サイズより画面が小さい場合があるため)
 let mag; // 倍率 (画像横幅 / 表示横幅)
 let R, G, B; // 線形補間用のバッファ (高速化のためグローバル変数に)
@@ -31,7 +30,7 @@ window.onload = function() {
   }
   // 画像読み込み
   const img = new Image();
-  img.crossOrigin = "Anonymous";
+  img.crossOrigin = "anonymous";
   img.src = "./lena_std.bmp";
   img.onload = function () {
     W = img.width;
@@ -73,17 +72,15 @@ window.onload = function() {
 
 // マウスイベント
 dstCanvas.addEventListener("mousedown", function (e) {
-  mouse_isDown = true;
   x0 = e.offsetX;
   y0 = e.offsetY;
 }); 
 dstCanvas.addEventListener("mouseup", function (e) {
-  mouse_isDown = false;
   x0 = e.offsetX;
   y0 = e.offsetY;
 }); 
 dstCanvas.addEventListener("mousemove", function (e) {
-  if(mouse_isDown){
+  if (e.buttons == 1){
     x0 = e.offsetX;
     y0 = e.offsetY;
   }
@@ -123,7 +120,7 @@ function draw(){
       const dX = (X - x0) * mag;
       const dY = (Y - y0) * mag;
       const d = Math.sqrt(dX*dX + dY*dY);
-      if(d <= RAD){
+      if(d < RAD){
         // 写像:元画像→魚眼画像
         // X = R*x/√(D^2+x^2+y^2)
         // Y = R*y/√(D^2+x^2+y^2)
@@ -131,10 +128,10 @@ function draw(){
         // x = D*X/√(R^2-X^2-Y^2)
         // y = D*Y/√(R^2-X^2-Y^2)
         const Z = Math.sqrt(RAD*RAD - dX*dX - dY*dY);
-        const x = x0*mag + (D*dX) / Z;
-        const y = y0*mag + (D*dY) / Z;
+        const x = x0*mag + (D * dX) / Z;
+        const y = y0*mag + (D * dY) / Z;
         
-        if(x>=0 && x<W && y>=0 && y<H){
+        if(x >= 0 && x < W && y >= 0 && y < H){
           c = interpolation(x, y); // 元画像から線形補間で色を取得
         }else{
           c = BLACK; // 元画像の外側なら黒塗り
@@ -162,7 +159,9 @@ function interpolation(x, y)
 
   for(let i = 0; i <= 1; i++){
     for(let j = 0; j <= 1; j++){
-      const index = ((Y+j) * W + (X+i)) * 4;
+      let _x = X + i; if (_x >= W) _x = X;
+      let _y = Y + j; if (_y >= H) _y = Y;
+      const index = (_y * W + _x) * 4;
       R[i][j] = srcImg.data[index];
       G[i][j] = srcImg.data[index+1];
       B[i][j] = srcImg.data[index+2];
