@@ -102,6 +102,10 @@ function onTouch(e){
 // 描画
 function draw(){
   // レンズの中心座標が変化していなければ描画しない
+  if (x0 <  0 ) x0 = 0;
+  if (x0 >= W2) x0 = W2 - 1;
+  if (y0 <  0 ) y0 = 0;
+  if (y0 >= H2) y0 = H2 - 1;
   if((x0 == x0_prev) && (y0 == y0_prev)){
     requestAnimationFrame(draw); // 次回の描画
     return;
