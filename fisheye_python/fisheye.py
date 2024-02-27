@@ -8,7 +8,8 @@ import time #デバッグ用
 dir_path = os.path.dirname(__file__)
 image_path = os.path.join(dir_path, "lena_std.bmp")
 src_img = Image.open(image_path)
-src_data = src_img.load()
+# src_data = src_img.load()  # 方法2
+src_data = src_img.getdata() # 方法3
 
 W, H = src_img.size # 画像のサイズ
 RAD = int(W * 0.6)  # レンズの半径
@@ -16,7 +17,8 @@ D = int(RAD * 0.3)  # レンズの中心から投影面までの距離　(小さ
 
 # 処理後の画像
 dst_img = Image.new('RGB', (W, H))
-dst_data = dst_img.load()
+# dst_data = dst_img.load()       # 方法2
+dst_data = [None] * len(src_data) # 方法3
 
 # 線形補間用のバッファ (高速化のためグローバル変数に)
 R = [[0, 0], [0, 0]]
@@ -41,6 +43,7 @@ def draw():
 
     # 写像後の座標
     for Y in range(H):
+        Y_offset = Y * W # 方法3
         for X in range(W):
             # レンズの中心からの相対座標
             dX = X - x0
@@ -59,15 +62,21 @@ def draw():
 
                 if 0 <= x < W and 0 <= y < H:
                     color_val = interpolation(x, y) # 元画像から線形補間で色を取得
-                    # dst_img.putpixel((X, Y), color_val)
-                    dst_data[X,Y] = color_val
+                    # dst_img.putpixel((X, Y), color_val) # 方法1
+                    # dst_data[X,Y] = color_val           # 方法2
+                    dst_data[Y_offset + X] = color_val    # 方法3
                 else:
-                    # dst_img.putpixel((X, Y), (0, 0, 0)) # 画像の外側なら黒塗り
-                    dst_data[X,Y] = (0, 0, 0)
+                    # 画像の外側なら黒塗り
+                    # dst_img.putpixel((X, Y), (0, 0, 0)) # 方法1
+                    # dst_data[X,Y] = (0, 0, 0)           # 方法2
+                    dst_data[Y_offset + X] = (0, 0, 0)    # 方法3
             else:
-                # dst_img.putpixel((X, Y), (0, 0, 0)) # レンズの外側なら黒塗り
-                dst_data[X,Y] = (0, 0, 0)
+                # レンズの外側なら黒塗り
+                # dst_img.putpixel((X, Y), (0, 0, 0))     # 方法1
+                # dst_data[X,Y] = (0, 0, 0)               # 方法2
+                dst_data[Y_offset + X] = (0, 0, 0)        # 方法3
 
+    dst_img.putdata(dst_data) # 方法3
     img_tk = ImageTk.PhotoImage(dst_img)
     label.config(image=img_tk)
     label.image = img_tk
@@ -88,8 +97,9 @@ def interpolation(x, y):
             if _x >= W: _x = X
             _y = Y + j
             if _y >= H: _y = Y
-            # R[i][j], G[i][j], B[i][j] = src_img.getpixel((_x, _y))
-            R[i][j], G[i][j], B[i][j] = src_data[_x, _y]
+            # R[i][j], G[i][j], B[i][j] = src_img.getpixel((_x, _y)) # 方法1
+            # R[i][j], G[i][j], B[i][j] = src_data[_x, _y]           # 方法2
+            R[i][j], G[i][j], B[i][j] = src_data[_y * W + _x]        # 方法3
     dX = x - X
     dY = y - Y
     MdX = 1 - dX

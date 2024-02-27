@@ -34,5 +34,5 @@
 ## Python
 - Python 3.10.0 で動作確認
 - Tkinter と Pillow を使用
-- getpixel / putpixel は遅いので、高速化のため Image.load を使用し、_PixelAccessor で処理しているが、いまだ十分な処理速度が得られない。作者の環境で1フレームの更新に約1秒もかかる。
+- getpixel / putpixel は遅いので、高速化のため getdata / putdata を使用したが、いまだ十分な処理速度が得られない。作者の環境で1フレームの更新に1秒近くかかる。
 - Pythonはfor文が遅い。
