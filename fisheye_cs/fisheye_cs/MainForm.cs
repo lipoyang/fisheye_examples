@@ -125,7 +125,7 @@ namespace fisheye_cs
                     int dX = X - x0;
                     int dY = Y - y0;
                     double d = Math.Sqrt(dX*dX + dY*dY);
-                    if (d <= RAD) {
+                    if (d < RAD) {
                         // 写像:元画像→魚眼画像
                         // X = R*x/√(D^2+x^2+y^2)
                         // Y = R*y/√(D^2+x^2+y^2)
