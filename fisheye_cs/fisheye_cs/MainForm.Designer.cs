@@ -57,7 +57,7 @@ namespace fisheye_cs
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "MainForm";
-            this.Text = "魚眼でレナさん";
+            this.Text = "魚眼変換";
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox)).EndInit();
             this.ResumeLayout(false);
 
