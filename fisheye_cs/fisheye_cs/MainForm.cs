@@ -17,7 +17,6 @@ namespace fisheye_cs
 
         byte[] BLACK = { 0, 0, 0 }; // 黒色
         int x0_prev, y0_prev; // レンズの中心座標の前回値
-        bool mouse_isDown = false; // マウス押下中フラグ
         Stopwatch stopwatch = new Stopwatch(); // デバッグ用
 
         // 線形補間用のバッファ (高速化のためグローバル変数に)
@@ -35,7 +34,8 @@ namespace fisheye_cs
         public MainForm()
         {
             InitializeComponent();
-
+            
+            // 画像読み込み
             Image img = Image.FromFile("lena_std.bmp");
             srcImg = (Bitmap)img.Clone();
 
@@ -64,15 +64,13 @@ namespace fisheye_cs
         // マウスイベント
         private void pictureBox_MouseDown(object sender, MouseEventArgs e)
         {
-            mouse_isDown = true;
             x0 = e.X;
             y0 = e.Y;
             pictureBox.Invalidate();
         }
         private void pictureBox_MouseMove(object sender, MouseEventArgs e)
         {
-            if (mouse_isDown)
-            {
+            if ((MouseButtons & MouseButtons.Left) == MouseButtons.Left){
                 x0 = e.X;
                 y0 = e.Y;
                 pictureBox.Invalidate();
@@ -80,7 +78,6 @@ namespace fisheye_cs
         }
         private void pictureBox_MouseUp(object sender, MouseEventArgs e)
         {
-            mouse_isDown = false;
             x0 = e.X;
             y0 = e.Y;
             pictureBox.Invalidate();
@@ -93,10 +90,9 @@ namespace fisheye_cs
             if (x0 >= W) x0 = W - 1;
             if (y0 <  0) y0 = 0;
             if (y0 >= H) y0 = H - 1;
-
+            
             // レンズの中心座標が変化していなければ描画しない
-            if ((x0 == x0_prev) && (y0 == y0_prev))
-            {
+            if ((x0 == x0_prev) && (y0 == y0_prev)){
                 return;
             }
             x0_prev = x0;
@@ -119,7 +115,6 @@ namespace fisheye_cs
             int dstStride = dstImgData.Stride;
             IntPtr dstPtr = dstImgData.Scan0;
 
-            double x, y; //写像前の座標
             // 写像後の座標
             for (int Y = 0; Y < H; Y++) {
                 for (int X = 0; X < W; X++) {
@@ -129,7 +124,7 @@ namespace fisheye_cs
                     // レンズの中心からの相対座標
                     int dX = X - x0;
                     int dY = Y - y0;
-                    double d = Math.Sqrt(dX * dX + dY * dY);
+                    double d = Math.Sqrt(dX*dX + dY*dY);
                     if (d <= RAD) {
                         // 写像:元画像→魚眼画像
                         // X = R*x/√(D^2+x^2+y^2)
@@ -137,9 +132,9 @@ namespace fisheye_cs
                         // 逆写像:魚眼画像→元画像
                         // x = D*X/√(R^2-X^2-Y^2)
                         // y = D*Y/√(R^2-X^2-Y^2)
-                        double Z = Math.Sqrt(RAD * RAD - dX * dX - dY * dY);
-                        x = x0 + (D * dX) / Z;
-                        y = y0 + (D * dY) / Z;
+                        double Z = Math.Sqrt(RAD*RAD - dX*dX - dY*dY);
+                        double x = x0 + (D * dX) / Z;
+                        double y = y0 + (D * dY) / Z;
 
                         if (x >= 0 && x < W && y >= 0 && y < H) {
                             c = interpolation(x, y); // 元画像から線形補間で色を取得

@@ -31,8 +31,6 @@ void draw() {
     y0 = constrain(mouseY, 0, H - 1);
   }
 
-  // 写像前の座標
-  float x,y;
   // 写像後の座標
   for(int Y = 0; Y < H; Y++){
     for(int X = 0; X < W; X++){
@@ -50,8 +48,8 @@ void draw() {
         // x = D*X/√(R^2-X^2-Y^2)
         // y = D*Y/√(R^2-X^2-Y^2)
         float Z = sqrt(R*R - dX*dX - dY*dY);
-        x = x0 + (D * dX) / Z;
-        y = y0 + (D * dY) / Z;
+        float x = x0 + (D * dX) / Z;
+        float y = y0 + (D * dY) / Z;
         
         if(x >= 0 && x < W && y >= 0 && y < H){
           c = interpolation(x, y); // 元画像から線形補間で色を取得
