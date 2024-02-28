@@ -26,40 +26,36 @@ y0 = H // 2
 x0_prev = 0
 y0_prev = 0
 
-# 描画
-def draw():
-    global dst_data, x0, y0, x0_prev, y0_prev
+# 線形補間
+@jit("Tuple((uint8, uint8, uint8))(float64, float64)", nopython=True, cache=True)
+def interpolation(x, y):
+    R = np.zeros((2, 2), dtype=float)
+    G = np.zeros((2, 2), dtype=float)
+    B = np.zeros((2, 2), dtype=float)
 
-    if x0 <  0: x0 = 0
-    if x0 >= W: x0 = W - 1
-    if y0 <  0: y0 = 0
-    if y0 >= H: y0 = H - 1
-
-    # レンズの中心座標が変化していなければ描画しない
-    if x0 == x0_prev and y0 == y0_prev:
-        return
-    x0_prev = x0
-    y0_prev = y0
-
-    start_time = time.time()
-
-    # 描画サブルーチン
-    draw_sub(x0, y0, dst_data)
-
-    dst_img = Image.fromarray(dst_data)
-    img_tk = ImageTk.PhotoImage(dst_img)
-    label.config(image=img_tk)
-    label.image = img_tk
-
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    print(f"time: {elapsed_time} sec")
+    X = int(x)
+    Y = int(y)
+    for i in range(2):
+        for j in range(2):
+            _x = X + i
+            if _x >= W: _x = X
+            _y = Y + j
+            if _y >= H: _y = Y
+            R[i, j] = src_data[_y, _x, 0]
+            G[i, j] = src_data[_y, _x, 1]
+            B[i, j] = src_data[_y, _x, 2]            
+    dX = x - X
+    dY = y - Y
+    MdX = 1 - dX
+    MdY = 1 - dY
+    r = round(MdX * (MdY * R[0, 0] + dY * R[0, 1]) + dX * (MdY * R[1, 0] + dY * R[1, 1]))
+    g = round(MdX * (MdY * G[0, 0] + dY * G[0, 1]) + dX * (MdY * G[1, 0] + dY * G[1, 1]))
+    b = round(MdX * (MdY * B[0, 0] + dY * B[0, 1]) + dX * (MdY * B[1, 0] + dY * B[1, 1]))
+    return r, g, b
 
 # 描画サブルーチン
-@jit(nopython=True)
+@jit("void(int64, int64, uint8[:, :, :])", nopython=True, cache=True)
 def draw_sub(x0, y0, dst_data):
-    # dst_data = np.zeros((H, W, 3), dtype=np.uint8) # 方法5
-
     # 写像後の座標
     for Y in range(H):
         for X in range(W):
@@ -85,32 +81,34 @@ def draw_sub(x0, y0, dst_data):
             else:
                 dst_data[Y, X] = (0, 0, 0) # レンズの外側なら黒塗り
 
-# 線形補間
-@jit(nopython=True)
-def interpolation(x, y):
-    R = np.zeros((2, 2))
-    G = np.zeros((2, 2))
-    B = np.zeros((2, 2))
+# 描画
+def draw():
+    global dst_data, x0, y0, x0_prev, y0_prev
 
-    X = int(x)
-    Y = int(y)
-    for i in range(2):
-        for j in range(2):
-            _x = X + i
-            if _x >= W: _x = X
-            _y = Y + j
-            if _y >= H: _y = Y
-            R[i, j] = src_data[_y, _x, 0]
-            G[i, j] = src_data[_y, _x, 1]
-            B[i, j] = src_data[_y, _x, 2]            
-    dX = x - X
-    dY = y - Y
-    MdX = 1 - dX
-    MdY = 1 - dY
-    r = round(MdX * (MdY * R[0, 0] + dY * R[0, 1]) + dX * (MdY * R[1, 0] + dY * R[1, 1]))
-    g = round(MdX * (MdY * G[0, 0] + dY * G[0, 1]) + dX * (MdY * G[1, 0] + dY * G[1, 1]))
-    b = round(MdX * (MdY * B[0, 0] + dY * B[0, 1]) + dX * (MdY * B[1, 0] + dY * B[1, 1]))
-    return r, g, b
+    if x0 <  0: x0 = 0
+    if x0 >= W: x0 = W - 1
+    if y0 <  0: y0 = 0
+    if y0 >= H: y0 = H - 1
+
+    # レンズの中心座標が変化していなければ描画しない
+    if x0 == x0_prev and y0 == y0_prev:
+        return
+    x0_prev = x0
+    y0_prev = y0
+
+    # start_time = time.time()
+
+    # 描画サブルーチン
+    draw_sub(x0, y0, dst_data)
+
+    dst_img = Image.fromarray(dst_data)
+    img_tk = ImageTk.PhotoImage(dst_img)
+    label.config(image=img_tk)
+    label.image = img_tk
+
+    # end_time = time.time()
+    # elapsed_time = end_time - start_time
+    # print(f"time: {elapsed_time} sec")
 
 # マウスイベント
 def mouse_updown(event):
