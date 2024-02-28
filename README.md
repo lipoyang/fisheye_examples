@@ -1,7 +1,7 @@
 # fisheye_examples
 いろいろな言語で魚眼画像への変換
 
-<img src="./fisheye_js/thumb.png" width="352">
+<img src="./fig1.png" width="352">
 
 ## 概要
 いろいろなプログラミング言語で魚眼画像への変換を実装しました。
@@ -9,13 +9,13 @@
 画像処理系のライブラリは使わずにアルゴリズムを実装しました。
 マウスで画面をさわると、レンズの中心位置を動かすことができます。
 
-![図](./figure.jpg)
+![図](./fig2.jpg)
 
 ## 対応した言語
 - [Processing](./fisheye_processing)
 - [JavaScript](./fisheye_js)
 - [C#](./fisheye_cs)
-- [Python](./fisheye_python/) (処理速度に難あり)
+- [Python](./fisheye_python/)
 
 ## Processing
 - Processing 4.3 で動作確認
@@ -33,6 +33,7 @@
 
 ## Python
 - Python 3.10.0 で動作確認
-- Tkinter と Pillow を使用
-- getpixel / putpixel は遅いので、高速化のため getdata / putdata を使用したが、いまだ十分な処理速度が得られない。作者の環境で1フレームの更新に1秒近くかかる。
-- Pythonはfor文が遅い。
+- GUIツールキットは Tkinter を使用、 画像の扱いには Pillow を使用
+- 配列の処理には NumPy を使用し、Numba によるJITコンパイルで高速化
+- NumPy と Numba を用いない方法では十分な処理速度が得られなかった。→ [fisheye_TOO_SLOW.py](./fisheye_python/fisheye_TOO_SLOW.py)
+
