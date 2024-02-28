@@ -134,7 +134,7 @@ def interpolation(x, y):
 
 # Tkinterウィンドウ
 root = Tk()
-root.title("Image Distortion")
+root.title("魚眼変換 (遅い)")
 label = Label(root) # 画像を表示するラベル
 label.pack()
 root.bind("<Button-1>", mouse_pressed) # マウスクリックイベント

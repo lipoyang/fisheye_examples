@@ -127,7 +127,7 @@ def mouse_move(event):
 
 # Tkinterウィンドウ
 root = Tk()
-root.title("Image Distortion")
+root.title("魚眼変換")
 label = Label(root) # 画像を表示するラベル
 label.pack()
 root.bind("<Button-1>",        mouse_updown)
