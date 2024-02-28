@@ -1,3 +1,7 @@
+# [メモ]
+# NumPy配列はfor文で回すとかえって遅くなる
+# しかしNumbaのJITコンパイルを併用することで非常に高速化できる
+
 from numba import jit
 from tkinter import *
 from PIL import Image, ImageTk
@@ -17,7 +21,6 @@ RAD = int(W * 0.6)  # レンズの半径
 D = int(RAD * 0.3)  # レンズの中心から投影面までの距離　(小さいほど大きく歪む)
 
 # 処理後の画像
-dst_img = Image.new('RGB', (W, H))
 dst_data = np.zeros((H, W, 3), dtype=np.uint8)
 
 # レンズの中心座標の初期値は中央
