@@ -1,7 +1,7 @@
-from numba import jit          # 方法5
+from numba import jit
 from tkinter import *
 from PIL import Image, ImageTk
-import numpy as np             # 方法5
+import numpy as np
 import math
 import os
 import time #デバッグ用
@@ -10,10 +10,7 @@ import time #デバッグ用
 dir_path = os.path.dirname(__file__)
 image_path = os.path.join(dir_path, "lena_std.bmp")
 src_img = Image.open(image_path)
-# src_data = src_img.load()    # 方法2
-# src_data = src_img.getdata() # 方法3
-# src_data = src_img.tobytes() # 方法4
-src_data = np.asarray(src_img) # 方法5
+src_data = np.asarray(src_img)
 
 W, H = src_img.size # 画像のサイズ
 RAD = int(W * 0.6)  # レンズの半径
@@ -21,15 +18,7 @@ D = int(RAD * 0.3)  # レンズの中心から投影面までの距離　(小さ
 
 # 処理後の画像
 dst_img = Image.new('RGB', (W, H))
-# dst_data = dst_img.load()           # 方法2
-# dst_data = [None] * len(src_data)   # 方法3
-# dst_data = bytearray(len(src_data)) # 方法4
-dst_data = np.zeros((H, W, 3), dtype=np.uint8) # 方法5
-
-# 線形補間用のバッファ (高速化のためグローバル変数に)
-# R = [[0, 0], [0, 0]]
-# G = [[0, 0], [0, 0]]
-# B = [[0, 0], [0, 0]]
+dst_data = np.zeros((H, W, 3), dtype=np.uint8)
 
 # レンズの中心座標の初期値は中央
 x0 = W // 2
@@ -54,11 +43,10 @@ def draw():
 
     start_time = time.time()
 
+    # 描画サブルーチン
     draw_sub(x0, y0, dst_data)
 
-    # dst_img.putdata(dst_data)                                       # 方法3
-    # dst_img = Image.frombytes('RGB', src_img.size, bytes(dst_data)) # 方法4
-    dst_img = Image.fromarray(dst_data)                               # 方法5
+    dst_img = Image.fromarray(dst_data)
     img_tk = ImageTk.PhotoImage(dst_img)
     label.config(image=img_tk)
     label.image = img_tk
@@ -68,19 +56,13 @@ def draw():
     print(f"time: {elapsed_time} sec")
 
 # 描画サブルーチン
-@jit(nopython=True) # 方法5
-# def draw():
-def draw_sub(x0, y0, dst_data): # 方法5
-    # global dst_data
-    # dst_data = bytearray(len(src_data)) # 方法4
+@jit(nopython=True)
+def draw_sub(x0, y0, dst_data):
     # dst_data = np.zeros((H, W, 3), dtype=np.uint8) # 方法5
 
     # 写像後の座標
     for Y in range(H):
-        Y_offset = Y * W # 方法3,方法4
         for X in range(W):
-            # index = (Y_offset + X) * 3 # 方法4
-
             # レンズの中心からの相対座標
             dX = X - x0
             dY = Y - y0
@@ -97,33 +79,15 @@ def draw_sub(x0, y0, dst_data): # 方法5
                 y = y0 + (D * dY) / Z
 
                 if 0 <= x < W and 0 <= y < H:
-                    color_val = interpolation(x, y) # 元画像から線形補間で色を取得
-                    # dst_img.putpixel((X, Y), color_val) # 方法1
-                    # dst_data[X,Y] = color_val           # 方法2
-                    # dst_data[Y_offset + X] = color_val  # 方法3
+                    dst_data[Y, X] = interpolation(x, y) # 元画像から線形補間で色を取得
                 else:
-                    # 画像の外側なら黒塗り
-                    # dst_img.putpixel((X, Y), (0, 0, 0)) # 方法1
-                    # dst_data[X,Y] = (0, 0, 0)           # 方法2
-                    # dst_data[Y_offset + X] = (0, 0, 0)  # 方法3
-                    color_val = (0, 0, 0)                 # 方法4
+                    dst_data[Y, X] = (0, 0, 0) # 画像の外側なら黒塗り
             else:
-                # レンズの外側なら黒塗り
-                # dst_img.putpixel((X, Y), (0, 0, 0))     # 方法1
-                # dst_data[X,Y] = (0, 0, 0)               # 方法2
-                # dst_data[Y_offset + X] = (0, 0, 0)      # 方法3
-                color_val = (0, 0, 0)                     # 方法4
-            # 方法4
-            #dst_data[index  ] = color_val[0]
-            #dst_data[index+1] = color_val[1]
-            #dst_data[index+2] = color_val[2]
-            # 方法5
-            dst_data[Y, X] = color_val
+                dst_data[Y, X] = (0, 0, 0) # レンズの外側なら黒塗り
 
 # 線形補間
-@jit(nopython=True) # 方法5
+@jit(nopython=True)
 def interpolation(x, y):
-    # global R, G, B
     R = np.zeros((2, 2))
     G = np.zeros((2, 2))
     B = np.zeros((2, 2))
@@ -136,15 +100,6 @@ def interpolation(x, y):
             if _x >= W: _x = X
             _y = Y + j
             if _y >= H: _y = Y
-            # R[i][j], G[i][j], B[i][j] = src_img.getpixel((_x, _y)) # 方法1
-            # R[i][j], G[i][j], B[i][j] = src_data[_x, _y]           # 方法2
-            # R[i][j], G[i][j], B[i][j] = src_data[_y * W + _x]      # 方法3
-            # 方法4
-            #index = (_y * W + _x) * 3
-            #R[i][j] = src_data[index]
-            #G[i][j] = src_data[index + 1]
-            #B[i][j] = src_data[index + 2]
-            # 方法5
             R[i, j] = src_data[_y, _x, 0]
             G[i, j] = src_data[_y, _x, 1]
             B[i, j] = src_data[_y, _x, 2]            
