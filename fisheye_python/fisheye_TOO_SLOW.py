@@ -1,5 +1,5 @@
 # [メモ1]
-# 方法1: Image.getpixel, putpixel → 遅い
+# 方法1: Image.getpixel/putpixel  → 遅い
 # 方法2: Image.load               → 方法1よりはかなり速く面倒もない
 # 方法3: Image.getdata/putdata    → 方法2よりさらに速いが、少しだけ面倒
 # 方法4: Image.tobytes/frombytes  → 方法3よりさらに面倒だが、速度の向上見られず
