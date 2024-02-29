@@ -42,7 +42,6 @@ public class FisheyeView  extends View {
 
     // 初期化
     private void init() {
-
         // 画像読み込み
         srcImg = BitmapFactory.decodeResource(getResources(), R.drawable.lena_std);
         // 画像サイズ
@@ -50,11 +49,22 @@ public class FisheyeView  extends View {
         H = srcImg.getHeight();
         RAD = (double)W * 0.6;
         D = RAD * 0.3; // 小さいほど大きく歪む
+    }
 
-        // 表示サイズ (暫定で元画像と同じサイズ)
+    // ビューのサイズが変更されたとき
+    @Override
+    protected void onSizeChanged (int w, int h, int oldw, int oldh){
+        // 表示サイズ (画像サイズより画面が小さい場合があるため)
         W2 = W;
         H2 = H;
         mag = 1;
+        int cW = getWidth();
+        int cH = getHeight();
+        int cL = (cW < cH) ? cW : cH;
+        if(cL < W){
+            W2 = H2 = cL;
+            mag = (double)W / (double)W2;
+        }
         dstImg = Bitmap.createBitmap(W2, H2, Bitmap.Config.ARGB_8888);
 
         // レンズの中心座標の初期値は中央
@@ -64,21 +74,7 @@ public class FisheyeView  extends View {
         y0_prev = 0;
 
         // 描画
-        //draw();
-    }
-
-    // ビューのサイズが変更されたとき
-    @Override
-    protected void onSizeChanged (int w, int h, int oldw, int oldh){
-        // 表示サイズ (画像サイズより画面が小さい場合があるため)
-        int cW = getWidth();
-        int cH = getHeight();
-        int cL = (cW < cH) ? cW : cH;
-        if(cL < W){
-            W2 = H2 = cL;
-            mag = (double)W / (double)W2;
-        }
-        dstImg = Bitmap.createBitmap(W2, H2, Bitmap.Config.ARGB_8888);
+        draw();
     }
 
     // ビューの描画
