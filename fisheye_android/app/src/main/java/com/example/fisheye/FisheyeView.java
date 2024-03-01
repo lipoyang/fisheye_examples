@@ -47,7 +47,7 @@ public class FisheyeView  extends View {
     private void init() {
         // 画像読み込み
         BitmapFactory.Options options = new BitmapFactory.Options();
-        options.inScaled = false;
+        options.inScaled = false; // スケーリングせずドットバイドットで
         srcImg = BitmapFactory.decodeResource(getResources(), R.drawable.lena_std, options);
         // 画像サイズ
         W = srcImg.getWidth();
@@ -130,6 +130,7 @@ public class FisheyeView  extends View {
 
         // 写像後の座標
         for(int Y = 0; Y < H2; Y++){
+            int Y_offset = Y * W2;
             for(int X = 0; X < W2; X++){
                 int c;
                 // レンズの中心からの相対座標
@@ -155,8 +156,8 @@ public class FisheyeView  extends View {
                 }else{
                     c = BLACK; // レンズの外側なら黒塗り
                 }
-                //dstImg.setPixel(X, Y, c);
-                dstData[Y * W2 + X] = c;
+                // dstImg.setPixel(X, Y, c);
+                dstData[Y_offset + X] = c;
             }
         }
         dstImg.setPixels(dstData, 0, W2, 0, 0, W2, H2);
@@ -174,21 +175,25 @@ public class FisheyeView  extends View {
             for(int j = 0; j <= 1; j++){
                 int _x = X + i; if (_x >= W) _x = X;
                 int _y = Y + j; if (_y >= H) _y = Y;
-                //int c = srcImg.getPixel(_x, _y);
+                // int c = srcImg.getPixel(_x, _y);
+                // _R[i][j] = Color.red(c);
+                // _G[i][j] = Color.green(c);
+                // _B[i][j] = Color.blue(c);
                 int c = srcData[_y * W + _x];
-                _R[i][j] = Color.red(c);
-                _G[i][j] = Color.green(c);
-                _B[i][j] = Color.blue(c);
+                _R[i][j] = (double)((c >> 16) & 0xFF);
+                _G[i][j] = (double)((c >>  8) & 0xFF);
+                _B[i][j] = (double)((c      ) & 0xFF);
             }
         }
         double dX = x - (double)X;
         double dY = y - (double)Y;
         double MdX = 1 - dX;
         double MdY = 1 - dY;
-        int r = (int)Math.round(MdX * (MdY * _R[0][0] + dY * _R[0][1]) + dX * (MdY * _R[1][0] + dY * _R[1][1]));
-        int g = (int)Math.round(MdX * (MdY * _G[0][0] + dY * _G[0][1]) + dX * (MdY * _G[1][0] + dY * _G[1][1]));
-        int b = (int)Math.round(MdX * (MdY * _B[0][0] + dY * _B[0][1]) + dX * (MdY * _B[1][0] + dY * _B[1][1]));
-        int ret = Color.argb(255, r, g, b);
+        int r = (int)(MdX * (MdY * _R[0][0] + dY * _R[0][1]) + dX * (MdY * _R[1][0] + dY * _R[1][1]));
+        int g = (int)(MdX * (MdY * _G[0][0] + dY * _G[0][1]) + dX * (MdY * _G[1][0] + dY * _G[1][1]));
+        int b = (int)(MdX * (MdY * _B[0][0] + dY * _B[0][1]) + dX * (MdY * _B[1][0] + dY * _B[1][1]));
+        // int ret = Color.argb(255, r, g, b);
+        int ret = 0xFF000000 | (r << 16) | (g << 8) | b;
         return ret;
     }
 }
