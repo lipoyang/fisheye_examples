@@ -43,7 +43,9 @@ public class FisheyeView  extends View {
     // 初期化
     private void init() {
         // 画像読み込み
-        srcImg = BitmapFactory.decodeResource(getResources(), R.drawable.lena_std);
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inScaled = false;
+        srcImg = BitmapFactory.decodeResource(getResources(), R.drawable.lena_std, options);
         // 画像サイズ
         W = srcImg.getWidth();
         H = srcImg.getHeight();
@@ -82,7 +84,11 @@ public class FisheyeView  extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         if (dstImg != null) {
+            //float scale = (float) getWidth() / W2;
+            //canvas.save();
+            //canvas.scale(scale, scale);
             canvas.drawBitmap(dstImg, 0, 0, new Paint());
+            //canvas.restore();
         }
     }
 
