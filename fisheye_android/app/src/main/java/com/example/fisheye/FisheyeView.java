@@ -126,7 +126,7 @@ public class FisheyeView  extends View {
         }
         return super.onTouchEvent(event);
     }
-    
+
     // 描画
     void draw() {
         long startTime = System.currentTimeMillis();
