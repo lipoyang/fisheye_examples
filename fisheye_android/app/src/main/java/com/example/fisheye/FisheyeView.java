@@ -3,6 +3,7 @@ package com.example.fisheye;
 import android.content.Context;
 import android.graphics.*;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -10,7 +11,9 @@ import android.view.View;
 public class FisheyeView  extends View {
 
     Bitmap srcImg; // 元画像
+    int[] srcData;
     Bitmap dstImg; // 処理後の画像
+    int[] dstData;
     int W, H; // 画像のサイズ
     double RAD; // レンズの半径
     double D; // レンズの中心から投影面までの距離
@@ -51,6 +54,9 @@ public class FisheyeView  extends View {
         H = srcImg.getHeight();
         RAD = (double)W * 0.6;
         D = RAD * 0.3; // 小さいほど大きく歪む
+
+        srcData = new int[W * H];
+        srcImg.getPixels(srcData, 0, W, 0, 0, W, H);
     }
 
     // ビューのサイズが変更されたとき
@@ -68,6 +74,7 @@ public class FisheyeView  extends View {
             mag = (double)W / (double)W2;
         }
         dstImg = Bitmap.createBitmap(W2, H2, Bitmap.Config.ARGB_8888);
+        dstData = new int[W2 * H2];
 
         // レンズの中心座標の初期値は中央
         x0 = W2 / 2;
@@ -119,6 +126,8 @@ public class FisheyeView  extends View {
     }
     // 描画
     void draw() {
+        long startTime = System.currentTimeMillis();
+
         // 写像後の座標
         for(int Y = 0; Y < H2; Y++){
             for(int X = 0; X < W2; X++){
@@ -146,9 +155,14 @@ public class FisheyeView  extends View {
                 }else{
                     c = BLACK; // レンズの外側なら黒塗り
                 }
-                dstImg.setPixel(X, Y, c);
+                //dstImg.setPixel(X, Y, c);
+                dstData[Y * W2 + X] = c;
             }
         }
+        dstImg.setPixels(dstData, 0, W2, 0, 0, W2, H2);
+
+        long elapsedTime = System.currentTimeMillis() - startTime;
+        Log.d("draw", "time: " + elapsedTime + " msec");
     }
 
     // 線形補間
@@ -160,7 +174,8 @@ public class FisheyeView  extends View {
             for(int j = 0; j <= 1; j++){
                 int _x = X + i; if (_x >= W) _x = X;
                 int _y = Y + j; if (_y >= H) _y = Y;
-                int c = srcImg.getPixel(_x, _y);
+                //int c = srcImg.getPixel(_x, _y);
+                int c = srcData[_y * W + _x];
                 _R[i][j] = Color.red(c);
                 _G[i][j] = Color.green(c);
                 _B[i][j] = Color.blue(c);
