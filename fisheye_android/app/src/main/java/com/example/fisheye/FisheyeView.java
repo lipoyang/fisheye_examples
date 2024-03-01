@@ -15,19 +15,19 @@ public class FisheyeView  extends View {
     Bitmap dstImg; // 処理後の画像
     int[] dstData;
     int W, H; // 画像のサイズ
-    double RAD; // レンズの半径
-    double D; // レンズの中心から投影面までの距離
+    float RAD; // レンズの半径
+    float D; // レンズの中心から投影面までの距離
     int x0,y0; // レンズの中心座標
 
     final int BLACK = Color.argb(255, 0, 0, 0); // 黒色
     int x0_prev, y0_prev; // レンズの中心座標の前回値
     int W2, H2; // 表示サイズ (画像サイズより画面が小さい場合があるため)
-    double mag; // 倍率 (画像横幅 / 表示横幅)
+    float mag; // 倍率 (画像横幅 / 表示横幅)
 
     // 線形補間用のバッファ (高速化のためグローバル変数に)
-    double[][] _R = new double[2][2];
-    double[][] _G = new double[2][2];
-    double[][] _B = new double[2][2];
+    float[][] _R = new float[2][2];
+    float[][] _G = new float[2][2];
+    float[][] _B = new float[2][2];
 
     // コンストラクタ
     public FisheyeView(Context context) {
@@ -52,8 +52,8 @@ public class FisheyeView  extends View {
         // 画像サイズ
         W = srcImg.getWidth();
         H = srcImg.getHeight();
-        RAD = (double)W * 0.6;
-        D = RAD * 0.3; // 小さいほど大きく歪む
+        RAD = (float)W * 0.6f;
+        D = RAD * 0.3f; // 小さいほど大きく歪む
 
         srcData = new int[W * H];
         srcImg.getPixels(srcData, 0, W, 0, 0, W, H);
@@ -71,7 +71,7 @@ public class FisheyeView  extends View {
         int cL = (cW < cH) ? cW : cH;
         if(cL < W){
             W2 = H2 = cL;
-            mag = (double)W / (double)W2;
+            mag = (float)W / (float)W2;
         }
         dstImg = Bitmap.createBitmap(W2, H2, Bitmap.Config.ARGB_8888);
         dstData = new int[W2 * H2];
@@ -134,9 +134,9 @@ public class FisheyeView  extends View {
             for(int X = 0; X < W2; X++){
                 int c;
                 // レンズの中心からの相対座標
-                double dX = (double)(X - x0) * mag;
-                double dY = (double)(Y - y0) * mag;
-                double d = Math.sqrt(dX*dX + dY*dY);
+                float dX = (float)(X - x0) * mag;
+                float dY = (float)(Y - y0) * mag;
+                float d = fastSqrt(dX*dX + dY*dY);
                 if(d < RAD){
                     // 写像:元画像→魚眼画像
                     // X = R*x/√(D^2+x^2+y^2)
@@ -144,9 +144,9 @@ public class FisheyeView  extends View {
                     // 逆写像:魚眼画像→元画像
                     // x = D*X/√(R^2-X^2-Y^2)
                     // y = D*Y/√(R^2-X^2-Y^2)
-                    double Z = Math.sqrt(RAD*RAD - dX*dX - dY*dY);
-                    double x = x0*mag + (D * dX) / Z;
-                    double y = y0*mag + (D * dY) / Z;
+                    float Z = fastSqrt(RAD*RAD - dX*dX - dY*dY);
+                    float x = x0*mag + (D * dX) / Z;
+                    float y = y0*mag + (D * dY) / Z;
 
                     if(x >= 0 && x < W && y >= 0 && y < H){
                         c = interpolation(x, y); // 元画像から線形補間で色を取得
@@ -167,7 +167,7 @@ public class FisheyeView  extends View {
     }
 
     // 線形補間
-    int interpolation(double x, double y)
+    int interpolation(float x, float y)
     {
         int X = (int)x;
         int Y = (int)y;
@@ -180,20 +180,36 @@ public class FisheyeView  extends View {
                 // _G[i][j] = Color.green(c);
                 // _B[i][j] = Color.blue(c);
                 int c = srcData[_y * W + _x];
-                _R[i][j] = (double)((c >> 16) & 0xFF);
-                _G[i][j] = (double)((c >>  8) & 0xFF);
-                _B[i][j] = (double)((c      ) & 0xFF);
+                _R[i][j] = (float)((c >> 16) & 0xFF);
+                _G[i][j] = (float)((c >>  8) & 0xFF);
+                _B[i][j] = (float)((c      ) & 0xFF);
             }
         }
-        double dX = x - (double)X;
-        double dY = y - (double)Y;
-        double MdX = 1 - dX;
-        double MdY = 1 - dY;
-        int r = (int)(MdX * (MdY * _R[0][0] + dY * _R[0][1]) + dX * (MdY * _R[1][0] + dY * _R[1][1]));
-        int g = (int)(MdX * (MdY * _G[0][0] + dY * _G[0][1]) + dX * (MdY * _G[1][0] + dY * _G[1][1]));
-        int b = (int)(MdX * (MdY * _B[0][0] + dY * _B[0][1]) + dX * (MdY * _B[1][0] + dY * _B[1][1]));
+        float dX = x - (float)X;
+        float dY = y - (float)Y;
+        float MdX = 1 - dX;
+        float MdY = 1 - dY;
+        int r = (int)fastRound(MdX * (MdY * _R[0][0] + dY * _R[0][1]) + dX * (MdY * _R[1][0] + dY * _R[1][1]));
+        int g = (int)fastRound(MdX * (MdY * _G[0][0] + dY * _G[0][1]) + dX * (MdY * _G[1][0] + dY * _G[1][1]));
+        int b = (int)fastRound(MdX * (MdY * _B[0][0] + dY * _B[0][1]) + dX * (MdY * _B[1][0] + dY * _B[1][1]));
         // int ret = Color.argb(255, r, g, b);
         int ret = 0xFF000000 | (r << 16) | (g << 8) | b;
         return ret;
+    }
+
+    // Math.sqrt(平方根計算)の高速化
+    static float fastSqrt(float x) {
+        float xhalf = 0.5f * x;
+        int i = Float.floatToIntBits(x);
+        i = 0x5f3759df - (i >> 1);
+        x = Float.intBitsToFloat(i);
+        x = x * (1.5f - xhalf * x * x);
+        return 1.0f / x;
+    }
+
+    // Math.round(四捨五入)の高速化
+    static int fastRound(float v){
+        int l = (int) (v * 2);
+        return (l >> 1) + (l & 0x1);
     }
 }
