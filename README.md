@@ -16,6 +16,7 @@
 - [JavaScript](./fisheye_js)
 - [C#](./fisheye_cs)
 - [Python](./fisheye_python/)
+- [Java(Android)](./fisheye_android/)
 
 ## Processing
 - Processing 4.3 で動作確認
@@ -37,3 +38,8 @@
 - 配列の処理には NumPy を使用し、Numba によるJITコンパイルで高速化
 - NumPy と Numba を用いない方法では十分な処理速度が得られなかった。→ [fisheye_TOO_SLOW.py](./fisheye_python/fisheye_TOO_SLOW.py)
 
+## Java (Android)
+- Android Studio Electric Eel で作成/動作確認 (最小APIレベル 24)
+- getPixel / setPixel は遅いので、getPixels / setPixels で一次元配列にまとめて取得/設定している。
+- Math.sqrt, Math.round, Color.argb, Color.red などは遅いので、自前で演算している。
+- 画面のスケーリングに注意
