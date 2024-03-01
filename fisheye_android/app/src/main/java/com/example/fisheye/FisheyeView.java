@@ -22,7 +22,8 @@ public class FisheyeView  extends View {
     final int BLACK = Color.argb(255, 0, 0, 0); // 黒色
     int x0_prev, y0_prev; // レンズの中心座標の前回値
     int W2, H2; // 表示サイズ (画像サイズより画面が小さい場合があるため)
-    float mag; // 倍率 (画像横幅 / 表示横幅)
+    float mag;  // 倍率 (画像横幅 / 表示横幅)
+    float mag2; // 倍率 (画面横幅 / 表示横幅)
 
     // 線形補間用のバッファ (高速化のためグローバル変数に)
     float[][] _R = new float[2][2];
@@ -75,6 +76,8 @@ public class FisheyeView  extends View {
         }
         dstImg = Bitmap.createBitmap(W2, H2, Bitmap.Config.ARGB_8888);
         dstData = new int[W2 * H2];
+        // 表示倍率
+        mag2 = (float)cL / (float)W2;
 
         // レンズの中心座標の初期値は中央
         x0 = W2 / 2;
@@ -91,11 +94,10 @@ public class FisheyeView  extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         if (dstImg != null) {
-            //float scale = (float) getWidth() / W2;
-            //canvas.save();
-            //canvas.scale(scale, scale);
+            canvas.save();
+            canvas.scale(mag2, mag2);
             canvas.drawBitmap(dstImg, 0, 0, new Paint());
-            //canvas.restore();
+            canvas.restore();
         }
     }
 
@@ -106,8 +108,8 @@ public class FisheyeView  extends View {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_MOVE:
             case MotionEvent.ACTION_UP:
-                x0 = (int)event.getX();
-                y0 = (int)event.getY();
+                x0 = (int)(event.getX() / mag2);
+                y0 = (int)(event.getY() / mag2);
                 if (x0 <  0 ) x0 = 0;
                 if (x0 >= W2) x0 = W2 - 1;
                 if (y0 <  0 ) y0 = 0;
@@ -124,6 +126,7 @@ public class FisheyeView  extends View {
         }
         return super.onTouchEvent(event);
     }
+    
     // 描画
     void draw() {
         long startTime = System.currentTimeMillis();
