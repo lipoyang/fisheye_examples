@@ -193,8 +193,8 @@ namespace fisheye_cs
                     }
                 }
             }
-            double dX = x - (int)x;
-            double dY = y - (int)y;
+            double dX = x - (double)X;
+            double dY = y - (double)Y;
             double MdX = 1 - dX;
             double MdY = 1 - dY;
             byte r = (byte)Math.Round(MdX * (MdY * R[0, 0] + dY * R[0, 1]) + dX * (MdY * R[1, 0] + dY * R[1, 1]));
