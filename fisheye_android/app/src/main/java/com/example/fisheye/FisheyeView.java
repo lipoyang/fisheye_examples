@@ -129,7 +129,7 @@ public class FisheyeView  extends View {
 
     // 描画
     void draw() {
-        long startTime = System.currentTimeMillis();
+        // long startTime = System.currentTimeMillis();
 
         // 写像後の座標
         for(int Y = 0; Y < H2; Y++){
@@ -165,8 +165,8 @@ public class FisheyeView  extends View {
         }
         dstImg.setPixels(dstData, 0, W2, 0, 0, W2, H2);
 
-        long elapsedTime = System.currentTimeMillis() - startTime;
-        Log.d("draw", "time: " + elapsedTime + " msec");
+        // long elapsedTime = System.currentTimeMillis() - startTime;
+        // Log.d("draw", "time: " + elapsedTime + " msec");
     }
 
     // 線形補間
