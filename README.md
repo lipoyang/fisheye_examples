@@ -16,7 +16,8 @@
 - [JavaScript](./fisheye_js)
 - [C#](./fisheye_cs)
 - [Python](./fisheye_python/)
-- [Java(Android)](./fisheye_android/)
+- [Java (Android)](./fisheye_android/)
+- [C++ (Qt)](./fisheye_qt/)
 
 ## Processing
 - Processing 4.3 で動作確認
@@ -43,3 +44,8 @@
 - getPixel / setPixel は遅いので、getPixels / setPixels で一次元配列にまとめて取得/設定している。
 - Math.sqrt, Math.round, Color.argb, Color.red などは遅いので、自前で演算している。
 - 画面のスケーリングに注意
+
+## C++ (Qt)
+- Qt Creator 12.0.2 / Qt 6.6.0 (MSVC 2019, x86_64) で作成/動作確認
+- Windows版 Qtウィジェットアプリ
+- QImage の pixelColor / setPixelColor は遅いので、bits を使用し、RGBA値が並んだuchar型一次元配列を取得して処理している。
