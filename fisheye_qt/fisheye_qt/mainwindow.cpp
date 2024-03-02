@@ -83,7 +83,7 @@ void MainWindow::paintEvent(QPaintEvent *event)
 // 描画
 void MainWindow::draw()
 {
-    timer.start();
+    // timer.start();
 
     // 写像後の座標
     for (int Y = 0; Y < H; Y++) {
@@ -128,8 +128,8 @@ void MainWindow::draw()
     QPixmap pixmap = QPixmap::fromImage(*dstImg);
     ui->label->setPixmap(pixmap);
 
-    qint64 elapsedTime = timer.elapsed();
-    qDebug() << "time: " << elapsedTime << "msec";
+    // qint64 elapsedTime = timer.elapsed();
+    // qDebug() << "time: " << elapsedTime << "msec";
 }
 
 // 線形補間
