@@ -19,19 +19,27 @@ set(PROJECT_SOURCES
         mainwindow.ui
 )
 
+# add bitmap image file to target directory
+set(RES_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lena_std.bmp)
+set(TGT_PSTH ${CMAKE_BINARY_DIR})
+if(WIN32)
+    string(REPLACE "/" "\\" RES_PATH ${RES_PATH})
+    string(REPLACE "/" "\\" TGT_PSTH ${TGT_PSTH})
+    set(COPY_CMD copy)
+else()
+    set(COPY_CMD cp)
+endif()
+
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(fisheye_qt
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
         lena_std.bmp
     )
-    set(resPath ${CMAKE_CURRENT_SOURCE_DIR}/lena_std.bmp)
-    string(REPLACE "/" "\\" winResPath ${resPath})
-    set(tgtPath ${CMAKE_BINARY_DIR})
-    string(REPLACE "/" "\\" winTgtPath ${tgtPath})
+    # add bitmap image file to target directory
     add_custom_command(
         TARGET fisheye_qt POST_BUILD
-        COMMAND copy ${winResPath} ${winTgtPath}
+        COMMAND ${COPY_CMD} ${RES_PATH} ${TGT_PSTH}
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET fisheye_qt APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
