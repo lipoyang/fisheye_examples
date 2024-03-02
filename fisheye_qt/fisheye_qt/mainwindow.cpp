@@ -10,10 +10,12 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    BLACK = QColor(0,0,0);
+    //BLACK = QColor(0,0,0);
+    BLACK[0] = BLACK[1] = BLACK[2] = 0;
 
     // 画像読み込み
     srcImg = new QImage("./lena_std.bmp");
+    srcData = srcImg->bits();
 
     W = srcImg->width();
     H = srcImg->height();
@@ -21,6 +23,7 @@ MainWindow::MainWindow(QWidget *parent)
     D = (int)(RAD * 0.3); // 小さいほど大きく歪む
 
     dstImg = new QImage(W, H, QImage::Format_RGB32);
+    dstData = dstImg->bits();
 
     // レンズの中心座標の初期値は中央
     x0 = W / 2;
@@ -86,8 +89,10 @@ void MainWindow::draw()
 
     // 写像後の座標
     for (int Y = 0; Y < H; Y++) {
+        int Yoffset = Y * W;
         for (int X = 0; X < W; X++) {
-            QColor c;
+            // QColor c;
+            uchar* c;
 
             // レンズの中心からの相対座標
             int dX = X - x0;
@@ -105,7 +110,8 @@ void MainWindow::draw()
                 double y = y0 + (D * dY) / Z;
 
                 if (x >= 0 && x < W && y >= 0 && y < H) {
-                    c = interpolation(x, y); // 元画像から線形補間で色を取得
+                    //c = interpolation(x, y); // 元画像から線形補間で色を取得
+                    c = interpolation(x, y);
                 } else {
                     //c = Color.Black; // 元画像の外側なら黒塗り
                     c = BLACK;
@@ -114,7 +120,11 @@ void MainWindow::draw()
                 //c = Color.Black; // レンズの外側なら黒塗り
                 c = BLACK;
             }
-            dstImg->setPixelColor(X, Y, c);
+            // dstImg->setPixelColor(X, Y, c);
+            int index = (Yoffset + X) * 4;
+            dstData[index + 2] = c[2];
+            dstData[index + 1] = c[1];
+            dstData[index + 0] = c[0];
         }
     }
     QPixmap pixmap = QPixmap::fromImage(*dstImg);
@@ -125,7 +135,8 @@ void MainWindow::draw()
 }
 
 // 線形補間
-QColor MainWindow::interpolation(double x, double y)
+// QColor MainWindow::interpolation(double x, double y)
+uchar* MainWindow::interpolation(double x, double y)
 {
     static double R[2][2];
     static double G[2][2];
@@ -139,20 +150,28 @@ QColor MainWindow::interpolation(double x, double y)
             int _x = X + i; if (_x >= W) _x = X;
             int _y = Y + j; if (_y >= H) _y = Y;
 
-            QColor c = srcImg->pixelColor(_x, _y);
-            R[i][j] = c.red();
-            G[i][j] = c.green();
-            B[i][j] = c.blue();
+            //QColor c = srcImg->pixelColor(_x, _y);
+            //R[i][j] = c.red();
+            //G[i][j] = c.green();
+            //B[i][j] = c.blue();
+            int index = (_y * W + _x) * 4;
+            R[i][j] = srcData[index + 2];
+            G[i][j] = srcData[index + 1];
+            B[i][j] = srcData[index + 0];
         }
     }
     double dX = x - (double)X;
     double dY = y - (double)Y;
     double MdX = 1 - dX;
     double MdY = 1 - dY;
-    int r = (int)round(MdX * (MdY * R[0][0] + dY * R[0][1]) + dX * (MdY * R[1][0] + dY * R[1][1]));
-    int g = (int)round(MdX * (MdY * G[0][0] + dY * G[0][1]) + dX * (MdY * G[1][0] + dY * G[1][1]));
-    int b = (int)round(MdX * (MdY * B[0][0] + dY * B[0][1]) + dX * (MdY * B[1][0] + dY * B[1][1]));
-
-    QColor ret(r,g,b);
+//  int r = (int)round(MdX * (MdY * R[0][0] + dY * R[0][1]) + dX * (MdY * R[1][0] + dY * R[1][1]));
+//  int g = (int)round(MdX * (MdY * G[0][0] + dY * G[0][1]) + dX * (MdY * G[1][0] + dY * G[1][1]));
+//  int b = (int)round(MdX * (MdY * B[0][0] + dY * B[0][1]) + dX * (MdY * B[1][0] + dY * B[1][1]));
+//  QColor ret(r,g,b);
+//  return ret;
+    static uchar ret[3];
+    ret[2] = (uchar)round(MdX * (MdY * R[0][0] + dY * R[0][1]) + dX * (MdY * R[1][0] + dY * R[1][1]));
+    ret[1] = (uchar)round(MdX * (MdY * G[0][0] + dY * G[0][1]) + dX * (MdY * G[1][0] + dY * G[1][1]));
+    ret[0] = (uchar)round(MdX * (MdY * B[0][0] + dY * B[0][1]) + dX * (MdY * B[1][0] + dY * B[1][1]));
     return ret;
 }
