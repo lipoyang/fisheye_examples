@@ -30,8 +30,6 @@ MainWindow::MainWindow(QWidget *parent)
     y0 = H / 2;
     x0_prev = 0;
     y0_prev = 0;
-
-    // draw(); TODO
 }
 // デストラクタ
 MainWindow::~MainWindow()
