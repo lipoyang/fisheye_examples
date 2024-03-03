@@ -14,7 +14,7 @@ MainWindow::MainWindow(QWidget *parent)
     BLACK[0] = BLACK[1] = BLACK[2] = 0;
 
     // 画像読み込み
-    srcImg = new QImage("./lena_std.bmp");
+    srcImg = new QImage("./resource/lena_std.bmp");
     srcData = srcImg->bits();
 
     W = srcImg->width();

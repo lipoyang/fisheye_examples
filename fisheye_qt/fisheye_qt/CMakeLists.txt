@@ -20,21 +20,21 @@ set(PROJECT_SOURCES
 )
 
 # add bitmap image file to target directory
-set(RES_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lena_std.bmp)
+set(RES_PATH ${CMAKE_CURRENT_SOURCE_DIR}/resource)
 set(TGT_PSTH ${CMAKE_BINARY_DIR})
 if(WIN32)
     string(REPLACE "/" "\\" RES_PATH ${RES_PATH})
-    string(REPLACE "/" "\\" TGT_PSTH ${TGT_PSTH})
-    set(COPY_CMD copy)
+    string(REPLACE "/" "\\" TGT_PSTH ${TGT_PSTH}/resource)
+    set(COPY_CMD xcopy /I /S /Y)
 else()
-    set(COPY_CMD cp)
+    set(COPY_CMD cp -rf)
 endif()
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(fisheye_qt
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
-        lena_std.bmp
+        resource/lena_std.bmp
     )
     # add bitmap image file to target directory
     add_custom_command(
