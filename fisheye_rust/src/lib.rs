@@ -25,6 +25,7 @@ pub struct App {
     w2: u32, // 表示画像の幅
     h2: u32, // 表示画像の高さ
     mag: f64, // 倍率 (画像横幅 / 表示横幅)
+    initialized: bool,
 }
 
 // 元画像のバイト列バッファ
@@ -58,13 +59,10 @@ pub fn start() -> Result<(), JsValue>
     // マウスイベント
     {
         let app = app.clone();
-        let dst_context = dst_context.clone();
         let mouse_updown = Closure::wrap(Box::new(move |e: web_sys::MouseEvent| {
             let mut _app = app.get();
             _app.x0 = e.client_x();
             _app.y0 = e.client_y();
-            // 描画
-            draw(&mut _app, &dst_context);
             app.set(_app);
         }) as Box<dyn FnMut(web_sys::MouseEvent)>);
         dst_canvas.set_onmousedown(Some(mouse_updown.as_ref().unchecked_ref()));
@@ -73,14 +71,11 @@ pub fn start() -> Result<(), JsValue>
     }
     {
         let app = app.clone();
-        let dst_context = dst_context.clone();
         let mouse_move = Closure::wrap(Box::new(move |e: web_sys::MouseEvent| {
             if e.buttons() == 1 {
                 let mut _app = app.get();
                 _app.x0 = e.client_x();
                 _app.y0 = e.client_y();
-                // 描画
-                draw(&mut _app, &dst_context);
                 app.set(_app);
             }
         }) as Box<dyn FnMut(web_sys::MouseEvent)>);
@@ -90,7 +85,6 @@ pub fn start() -> Result<(), JsValue>
     // タッチイベント
     {
         let app = app.clone();
-        let dst_context = dst_context.clone();
         let touch_move = Closure::wrap(Box::new(move |e: web_sys::TouchEvent| {
             let mut _app = app.get();
             let touches = e.touches();
@@ -98,8 +92,6 @@ pub fn start() -> Result<(), JsValue>
                 if let Some(touch) = touches.item(0) {
                     _app.x0 = touch.client_x();
                     _app.y0 = touch.client_y();
-                    // 描画
-                    draw(&mut _app, &dst_context);
                     app.set(_app);
                 }
             }
@@ -116,7 +108,6 @@ pub fn start() -> Result<(), JsValue>
     {
         let _src_image = src_image.clone();
         let app = app.clone();
-        let dst_context = dst_context.clone();
         
         // 画像ファイル読み込み完了時の処理
         let closure = Closure::once_into_js(move |_event: web_sys::Event| {
@@ -154,8 +145,6 @@ pub fn start() -> Result<(), JsValue>
             _app.y0 = (_app.h2 / 2) as i32;
             _app.x0_prev = 0;
             _app.y0_prev = 0;
-
-            app.set(_app);
             
             // 元画像のイメージデータを取得
             let src_canvas = document.create_element("canvas")
@@ -176,15 +165,38 @@ pub fn start() -> Result<(), JsValue>
             // 表示画像のキャンバスサイズ設定
             dst_canvas.set_width(_app.w2);
             dst_canvas.set_height(_app.h2);
-          
-            // 描画
-            draw(&mut _app, &dst_context);
+
+            _app.initialized = true; // 初期化完了
+            app.set(_app);
         }); // TODO
         src_image.borrow_mut().set_onload(Some(closure.as_ref().unchecked_ref()));
         src_image.borrow_mut().set_src("./lena_std.bmp");
         // TODO
     }
+    // 描画更新の仕組み (JSの requestAnimationFrame 相当)
+    {
+        let app = app.clone();
+        let dst_context = dst_context.clone();
+        let f = Rc::new(RefCell::new(None));
+        let g = f.clone();
+        *g.borrow_mut() = Some(Closure::new(move |/*param*/| {
+            let mut _app = app.get();
+            if _app.initialized {
+                draw(&mut _app, &dst_context); // 描画
+                app.set(_app);
+            }
+            request_animation_frame(f.borrow().as_ref().unwrap());
+        }));
+        request_animation_frame(g.borrow().as_ref().unwrap());
+    }
     Ok(())
+}
+
+// 描画更新の仕組み (JSの requestAnimationFrame 相当)
+fn request_animation_frame(f: &Closure<dyn FnMut(/*param*/)>) {
+    web_sys::window().unwrap()
+        .request_animation_frame(f.as_ref().unchecked_ref())
+        .expect("should register `requestAnimationFrame` OK");
 }
 
 // 描画
@@ -210,9 +222,9 @@ fn draw(_app: &mut App,dst_context: &CanvasRenderingContext2d)
     
     // レンズの中心座標が変化していなければ描画しない
     if (x0 == _app.x0_prev) && (y0 == _app.y0_prev) {
-      // requestAnimationFrame(draw); // 次回の描画
-      return;
+        return;
     }
+    console::log_1(&JsValue::from_str(&format!("{} {} -> {} {}",_app.x0_prev, _app.y0_prev, x0, y0)));
     _app.x0 = x0;
     _app.y0 = y0;
     _app.x0_prev = x0;
