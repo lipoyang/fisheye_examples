@@ -65,10 +65,8 @@ pub fn start() -> Result<(), JsValue> {
         let dst_context = dst_context.clone();
         let mouse_updown = Closure::wrap(Box::new(move |e: web_sys::MouseEvent| {
             let mut _app = app.get();
-            //console::log_1(&JsValue::from_str(&format!("b {} {} ", _app.x0, _app.y0)));
             _app.x0 = e.client_x();
             _app.y0 = e.client_y();
-            console::log_1(&JsValue::from_str(&format!("a {} {} ", _app.x0, _app.y0)));
             // 描画
             draw(&mut _app,&dst_context);
             app.set(_app);
@@ -83,10 +81,8 @@ pub fn start() -> Result<(), JsValue> {
         let mouse_move = Closure::wrap(Box::new(move |e: web_sys::MouseEvent| {
             if e.buttons() == 1 {
                 let mut _app = app.get();
-                //console::log_1(&JsValue::from_str(&format!("b {} {} ", _app.x0, _app.y0)));
                 _app.x0 = e.client_x();
                 _app.y0 = e.client_y();
-                console::log_1(&JsValue::from_str(&format!("a {} {} ", _app.x0, _app.y0)));
                 // 描画
                 draw(&mut _app,&dst_context);
                 app.set(_app);
@@ -104,10 +100,8 @@ pub fn start() -> Result<(), JsValue> {
             let touches = e.touches();
             if touches.length() > 0 {
                 if let Some(touch) = touches.item(0) {
-                    //console::log_1(&JsValue::from_str(&format!("b {} {} ", _app.x0, _app.y0)));
                     _app.x0 = touch.client_x();
                     _app.y0 = touch.client_y();
-                    console::log_1(&JsValue::from_str(&format!("a {} {} ", _app.x0, _app.y0)));
                     // 描画
                     draw(&mut _app,&dst_context);
                     app.set(_app);
@@ -204,6 +198,8 @@ fn draw(_app: &mut App,dst_context: &CanvasRenderingContext2d)
     _app.x0_prev = x0;
     _app.y0_prev = y0;
 
+    let start_time = js_sys::Date::now();
+
     // 写像後の座標
     for y in 0..h {
         for x in 0..w {
@@ -240,6 +236,10 @@ fn draw(_app: &mut App,dst_context: &CanvasRenderingContext2d)
     let dst_data = Clamped(&dst_data[..]);
     let dst_data = ImageData::new_with_u8_clamped_array_and_sh(dst_data, _app.w, _app.h).unwrap();
     dst_context.put_image_data(&dst_data, 0.0, 0.0).unwrap();
+
+    let end_time = js_sys::Date::now();
+    let elapsed_time = end_time - start_time;
+    console::log_1(&JsValue::from_str(&format!("draw in {} msec", elapsed_time)));
 }
 
 // 線形補間
