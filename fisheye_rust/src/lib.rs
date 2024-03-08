@@ -1,22 +1,18 @@
-use std::f64;
+use std::rc::Rc;
+use std::cell::Cell;
+use std::cell::RefCell;
 use std::ops::Deref;
-use js_sys::DataView;
-use wasm_bindgen::convert::OptionIntoWasmAbi;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::console;
-use web_sys::HtmlImageElement;
-use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};//, Uint8ClampedArray};
-use js_sys::Uint8Array;
-use std::rc::Rc;
-use std::cell::RefCell;
-use std::cell::Cell;
+use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElement, ImageData};
 use wasm_bindgen::Clamped;
 
-const BLACK: [u8; 4] = [0, 0, 0, 255];
+// 定数
+const BLACK: [u8; 4] = [0, 0, 0, 255]; // 黒色
 
 // アプリケーションの変数
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Default)]
 pub struct App {
     w: u32, // 元画像の幅
     h: u32, // 元画像の高さ
@@ -31,31 +27,32 @@ pub struct App {
     mag: f64, // 倍率 (画像横幅 / 表示横幅)
 }
 
+// 元画像のバイト列バッファ
 static mut SRC_DATA: Vec<u8> = Vec::new();
 
 // 初期化
 #[wasm_bindgen(start)]
-pub fn start() -> Result<(), JsValue> {
-
-    console::log_1(&JsValue::from_str("Hello world!"));
+pub fn start() -> Result<(), JsValue>
+{
+    console::log_1(&JsValue::from_str("Hello world!")); // TODO
 
     // アプリケーションの変数を初期化
-    let mut app:App = Default::default();
-    let mut app = Rc::new(Cell::new(app));
+    let app:App = Default::default();
+    let app = Rc::new(Cell::new(app));
 
-    // キャンバスを取得
+    // 表示用キャンバスを取得
     let document = web_sys::window().unwrap().document().unwrap();
     let dst_canvas = document.get_element_by_id("dstCanvas").unwrap();
-    let dst_canvas: web_sys::HtmlCanvasElement = dst_canvas
-        .dyn_into::<web_sys::HtmlCanvasElement>()
+    let dst_canvas = dst_canvas
+        .dyn_into::<HtmlCanvasElement>()
         .map_err(|_| ())
         .unwrap();
-    // コンテキストを取得
+    // 表示用コンテキストを取得
     let dst_context = dst_canvas
         .get_context("2d")
         .unwrap()
         .unwrap()
-        .dyn_into::<web_sys::CanvasRenderingContext2d>()
+        .dyn_into::<CanvasRenderingContext2d>()
         .unwrap();
     let dst_context = Rc::new(dst_context); // TODO
 
@@ -68,7 +65,7 @@ pub fn start() -> Result<(), JsValue> {
             _app.x0 = e.client_x();
             _app.y0 = e.client_y();
             // 描画
-            draw(&mut _app,&dst_context);
+            draw(&mut _app, &dst_context);
             app.set(_app);
         }) as Box<dyn FnMut(web_sys::MouseEvent)>);
         dst_canvas.set_onmousedown(Some(mouse_updown.as_ref().unchecked_ref()));
@@ -84,7 +81,7 @@ pub fn start() -> Result<(), JsValue> {
                 _app.x0 = e.client_x();
                 _app.y0 = e.client_y();
                 // 描画
-                draw(&mut _app,&dst_context);
+                draw(&mut _app, &dst_context);
                 app.set(_app);
             }
         }) as Box<dyn FnMut(web_sys::MouseEvent)>);
@@ -103,7 +100,7 @@ pub fn start() -> Result<(), JsValue> {
                     _app.x0 = touch.client_x();
                     _app.y0 = touch.client_y();
                     // 描画
-                    draw(&mut _app,&dst_context);
+                    draw(&mut _app, &dst_context);
                     app.set(_app);
                 }
             }
@@ -115,58 +112,57 @@ pub fn start() -> Result<(), JsValue> {
     }
 
     // 画像読み込み
-    let src_image = web_sys:: HtmlImageElement::new().unwrap();
+    let src_image = HtmlImageElement::new().unwrap();
     let src_image = Rc::new(RefCell::new(src_image));
-    let _src_image = src_image.clone();
-    // 画像ファイル読み込み完了時の処理
-    let closure = Closure::once_into_js(move |_event: web_sys::Event| {
-        let src_image = Rc::try_unwrap(_src_image).unwrap().into_inner();
-        
+    {
+        let _src_image = src_image.clone();
         let app = app.clone();
-        let mut _app = app.get();
-        _app.w = src_image.width();
-        _app.h = src_image.height();
-        _app.r = _app.w as f64 * 0.6;
-        _app.d = _app.r * 0.3; // 小さいほど大きく歪む
-
-        _app.x0 = (_app.w / 2) as i32;
-        _app.y0 = (_app.h / 2) as i32;
-        _app.x0_prev = 0;
-        _app.y0_prev = 0;
-
         let dst_context = dst_context.clone();
-        
-        // 元画像のイメージデータを取得
-        let document = web_sys::window().unwrap().document().unwrap();
-
-        let src_canvas = document.create_element("canvas")
-            .unwrap().dyn_into::<HtmlCanvasElement>().unwrap();
-        let src_context = src_canvas.get_context("2d")
-            .unwrap().unwrap().dyn_into::<CanvasRenderingContext2d>().unwrap();
-        src_canvas.set_width(_app.w);
-        src_canvas.set_height(_app.h);
-        src_context.draw_image_with_html_image_element(&src_image, 0.0, 0.0).unwrap();
-        let _src_data = src_context.get_image_data(0.0, 0.0, _app.w as f64, _app.h as f64).unwrap();
-        let _src_data = _src_data.data();
-        let _src_data = _src_data.deref();
-        unsafe{
-            SRC_DATA.resize(_src_data.len(), 0);
-            SRC_DATA.clone_from_slice(&_src_data);
-        }
-       
-        // 表示画像のキャンバスサイズ設定
-        app.set(_app);
-        dst_canvas.set_width(_app.w);
-        dst_canvas.set_height(_app.h);
-      
-        // 描画
-        draw(&mut _app,&dst_context);
-
-    }); // TODO
-    src_image.borrow_mut().set_onload(Some(closure.as_ref().unchecked_ref()));
-    src_image.borrow_mut().set_src("./lena_std.bmp");
-    // TODO
-
+        let closure = Closure::once_into_js(move |_event: web_sys::Event| {
+            // 画像ファイル読み込み完了時の処理
+            let src_image = Rc::try_unwrap(_src_image).unwrap().into_inner(); // TODO
+            
+            // アプリケーションの変数を設定
+            let mut _app = app.get();
+            _app.w = src_image.width();
+            _app.h = src_image.height();
+            _app.r = _app.w as f64 * 0.6;
+            _app.d = _app.r * 0.3; // 小さいほど大きく歪む
+            _app.x0 = (_app.w / 2) as i32;
+            _app.y0 = (_app.h / 2) as i32;
+            _app.x0_prev = 0;
+            _app.y0_prev = 0;
+            app.set(_app);
+            
+            // 元画像のイメージデータを取得
+            let document = web_sys::window().unwrap().document().unwrap();
+            let src_canvas = document.create_element("canvas")
+                .unwrap().dyn_into::<HtmlCanvasElement>().unwrap();
+            let src_context = src_canvas.get_context("2d")
+                .unwrap().unwrap().dyn_into::<CanvasRenderingContext2d>().unwrap();
+            src_canvas.set_width(_app.w);
+            src_canvas.set_height(_app.h);
+            src_context.draw_image_with_html_image_element(&src_image, 0.0, 0.0).unwrap();
+            let image_data = src_context.get_image_data(0.0, 0.0, _app.w as f64, _app.h as f64).unwrap();
+            let image_data = image_data.data();
+            let image_data = image_data.deref();
+            unsafe{
+                SRC_DATA.resize(image_data.len(), 0);
+                SRC_DATA.clone_from_slice(&image_data);
+            }
+           
+            // 表示画像のキャンバスサイズ設定
+            dst_canvas.set_width(_app.w);
+            dst_canvas.set_height(_app.h);
+          
+            // 描画
+            draw(&mut _app, &dst_context);
+    
+        }); // TODO
+        // TODO
+        src_image.borrow_mut().set_onload(Some(closure.as_ref().unchecked_ref()));
+        src_image.borrow_mut().set_src("./lena_std.bmp");
+    }
     Ok(())
 }
 
@@ -223,10 +219,10 @@ fn draw(_app: &mut App,dst_context: &CanvasRenderingContext2d)
                 if (_x >= 0.0) && (_x < w as f64) && (_y >= 0.0) && (_y < h as f64) {
                     c = interpolation(w as usize, h as usize, _x, _y); // 元画像から線形補間で色を取得
                 }else{
-                    c = [0, 0, 0, 255]; // 元画像の外側なら黒塗り
+                    c = BLACK; // 元画像の外側なら黒塗り
                 }
             }else{
-                c = [0, 0, 0, 255]; // レンズの外側なら黒塗り
+                c = BLACK; // レンズの外側なら黒塗り
             }
             let index = ((y * w + x) * 4) as usize;
             for i in 0..4 { dst_data[index + i] = c[i] };
