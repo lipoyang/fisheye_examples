@@ -30,4 +30,5 @@ features = [
   'TouchEvent',
   'TouchList',
   'Touch',
+  'DomRect',
 ]

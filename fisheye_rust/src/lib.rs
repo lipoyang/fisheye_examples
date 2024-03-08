@@ -25,7 +25,10 @@ pub struct App {
     w2: u32, // 表示画像の幅
     h2: u32, // 表示画像の高さ
     mag: f64, // 倍率 (画像横幅 / 表示横幅)
-    initialized: bool,
+
+    x_offset: i32, // 表示用キャンバスの左端オフセット
+    y_offset: i32, // 表示用キャンバスの上端オフセット
+    initialized: bool, // 初期化完了フラグ
 }
 
 // 元画像のバイト列バッファ
@@ -61,8 +64,8 @@ pub fn start() -> Result<(), JsValue>
         let app = app.clone();
         let mouse_updown = Closure::wrap(Box::new(move |e: web_sys::MouseEvent| {
             let mut _app = app.get();
-            _app.x0 = e.client_x();
-            _app.y0 = e.client_y();
+            _app.x0 = e.client_x() - _app.x_offset;
+            _app.y0 = e.client_y() - _app.y_offset;
             app.set(_app);
         }) as Box<dyn FnMut(web_sys::MouseEvent)>);
         dst_canvas.set_onmousedown(Some(mouse_updown.as_ref().unchecked_ref()));
@@ -74,8 +77,8 @@ pub fn start() -> Result<(), JsValue>
         let mouse_move = Closure::wrap(Box::new(move |e: web_sys::MouseEvent| {
             if e.buttons() == 1 {
                 let mut _app = app.get();
-                _app.x0 = e.client_x();
-                _app.y0 = e.client_y();
+                _app.x0 = e.client_x() - _app.x_offset;
+                _app.y0 = e.client_y() - _app.y_offset;
                 app.set(_app);
             }
         }) as Box<dyn FnMut(web_sys::MouseEvent)>);
@@ -90,8 +93,8 @@ pub fn start() -> Result<(), JsValue>
             let touches = e.touches();
             if touches.length() > 0 {
                 if let Some(touch) = touches.item(0) {
-                    _app.x0 = touch.client_x();
-                    _app.y0 = touch.client_y();
+                    _app.x0 = touch.client_x() - _app.x_offset;
+                    _app.y0 = touch.client_y() - _app.y_offset;
                     app.set(_app);
                 }
             }
@@ -165,6 +168,11 @@ pub fn start() -> Result<(), JsValue>
             // 表示画像のキャンバスサイズ設定
             dst_canvas.set_width(_app.w2);
             dst_canvas.set_height(_app.h2);
+            
+            // キャンバスのオフセット座標を取得
+            let rect = dst_canvas.get_bounding_client_rect();
+            _app.x_offset = rect.left() as i32;
+            _app.y_offset = rect.top() as i32;
 
             _app.initialized = true; // 初期化完了
             app.set(_app);
@@ -224,7 +232,7 @@ fn draw(_app: &mut App,dst_context: &CanvasRenderingContext2d)
     if (x0 == _app.x0_prev) && (y0 == _app.y0_prev) {
         return;
     }
-    console::log_1(&JsValue::from_str(&format!("{} {} -> {} {}",_app.x0_prev, _app.y0_prev, x0, y0)));
+    // console::log_1(&JsValue::from_str(&format!("{} {} -> {} {}",_app.x0_prev, _app.y0_prev, x0, y0)));
     _app.x0 = x0;
     _app.y0 = y0;
     _app.x0_prev = x0;
