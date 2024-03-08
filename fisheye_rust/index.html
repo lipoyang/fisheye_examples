@@ -1,17 +1,19 @@
 <!doctype html>
-<html lang="en-US">
+<html>
   <head>
     <meta charset="utf-8" />
-    <title>hello-wasm example</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=yes">
+    <title>魚眼変換</title>
   </head>
+
   <body>
+    <canvas id="dstCanvas"></canvas>
     <script type="module">
       import init from "./pkg/fisheye_rust.js";
       init().then(() => {
         //greet("WebAssembly");
       });
     </script>
-     <canvas id="canvas"></canvas>
-     <canvas id="canvas2"></canvas>
   </body>
 </html>

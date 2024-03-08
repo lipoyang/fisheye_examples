@@ -45,7 +45,7 @@ pub fn start() -> Result<(), JsValue> {
 
     // キャンバスを取得
     let document = web_sys::window().unwrap().document().unwrap();
-    let dst_canvas = document.get_element_by_id("canvas").unwrap();
+    let dst_canvas = document.get_element_by_id("dstCanvas").unwrap();
     let dst_canvas: web_sys::HtmlCanvasElement = dst_canvas
         .dyn_into::<web_sys::HtmlCanvasElement>()
         .map_err(|_| ())
