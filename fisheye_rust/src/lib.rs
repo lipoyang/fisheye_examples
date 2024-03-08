@@ -33,6 +33,8 @@ pub struct App {
 
 // 元画像のバイト列バッファ
 static mut SRC_DATA: Vec<u8> = Vec::new();
+// 表示画像のバイト列バッファ
+static mut DST_DATA: Vec<u8> = Vec::new();
 
 // 初期化
 #[wasm_bindgen(start)]
@@ -164,12 +166,15 @@ pub fn start() -> Result<(), JsValue>
                 SRC_DATA.resize(image_data.len(), 0);
                 SRC_DATA.clone_from_slice(&image_data);
             }
-           
-            // 表示画像のキャンバスサイズ設定
+
+            // 表示用キャンバスのサイズ設定
             dst_canvas.set_width(_app.w2);
             dst_canvas.set_height(_app.h2);
-            
-            // キャンバスのオフセット座標を取得
+            unsafe{
+                let size = _app.h2 * _app.w2 * 4;
+                DST_DATA.resize(size as usize, 0);
+            }
+            // 表示用キャンバスのオフセット座標を取得
             let rect = dst_canvas.get_bounding_client_rect();
             _app.x_offset = rect.left() as i32;
             _app.y_offset = rect.top() as i32;
@@ -210,9 +215,6 @@ fn request_animation_frame(f: &Closure<dyn FnMut(/*param*/)>) {
 // 描画
 fn draw(_app: &mut App,dst_context: &CanvasRenderingContext2d)
 {
-    let size = _app.h2 * _app.w2 * 4;
-    let mut dst_data: Vec<u8> = vec![0; size as usize];
-    
     let w = _app.w as i32;
     let h = _app.h as i32;
     let r = _app.r;
@@ -268,14 +270,17 @@ fn draw(_app: &mut App,dst_context: &CanvasRenderingContext2d)
             }else{
                 c = BLACK; // レンズの外側なら黒塗り
             }
-            let index = ((y * w2 + x) * 4) as usize;
-            for i in 0..4 { dst_data[index + i] = c[i] };
+            unsafe{
+                let index = ((y * w2 + x) * 4) as usize;
+                for i in 0..4 { DST_DATA[index + i] = c[i] };
+            }
         }
     }
-
-    let dst_data = Clamped(&dst_data[..]);
-    let dst_data = ImageData::new_with_u8_clamped_array_and_sh(dst_data, _app.w2, _app.h2).unwrap();
-    dst_context.put_image_data(&dst_data, 0.0, 0.0).unwrap();
+    unsafe{
+        let dst_data = Clamped(&DST_DATA[..]);
+        let dst_data = ImageData::new_with_u8_clamped_array_and_sh(dst_data, _app.w2, _app.h2).unwrap();
+        dst_context.put_image_data(&dst_data, 0.0, 0.0).unwrap();
+    }
 
     let end_time = js_sys::Date::now();
     let elapsed_time = end_time - start_time;
