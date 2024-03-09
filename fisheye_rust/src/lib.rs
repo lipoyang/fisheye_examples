@@ -5,7 +5,9 @@ use std::ops::Deref;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::console;
-use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElement, ImageData};
+use web_sys::{HtmlCanvasElement, HtmlImageElement};
+use web_sys::{CanvasRenderingContext2d, ImageData, DomRect};
+use web_sys::{Event, MouseEvent, TouchEvent, TouchList};
 use wasm_bindgen::Clamped;
 
 // 定数
@@ -48,59 +50,56 @@ pub fn start() -> Result<(), JsValue>
 
     // 表示用キャンバスとそのコンテキストを取得
     let document = web_sys::window().unwrap().document().unwrap();
-    let dst_canvas = document.get_element_by_id("dstCanvas").unwrap();
-    let dst_canvas = dst_canvas
+    let dst_canvas = document.get_element_by_id("dstCanvas")
+        .unwrap()
         .dyn_into::<HtmlCanvasElement>()
-        .map_err(|_| ())
         .unwrap();
-    let dst_context = dst_canvas
-        .get_context("2d")
+    let dst_context = dst_canvas.get_context("2d")
         .unwrap()
         .unwrap()
         .dyn_into::<CanvasRenderingContext2d>()
         .unwrap();
-    let dst_context = Rc::new(dst_context); // TODO
 
     // マウスイベント
     {
-        let app = app.clone();
-        let mouse_updown = Closure::wrap(Box::new(move |e: web_sys::MouseEvent| {
+        let app = Rc::clone(&app);
+        let mouse_updown = Closure::wrap(Box::new(move |e: MouseEvent| {
             let mut _app = app.get();
             _app.x0 = e.client_x() - _app.x_offset;
             _app.y0 = e.client_y() - _app.y_offset;
             app.set(_app);
-        }) as Box<dyn FnMut(web_sys::MouseEvent)>);
+        }) as Box<dyn FnMut(MouseEvent)>);
         dst_canvas.set_onmousedown(Some(mouse_updown.as_ref().unchecked_ref()));
         dst_canvas.set_onmouseup  (Some(mouse_updown.as_ref().unchecked_ref()));
         mouse_updown.forget();
     }
     {
-        let app = app.clone();
-        let mouse_move = Closure::wrap(Box::new(move |e: web_sys::MouseEvent| {
+        let app = Rc::clone(&app);
+        let mouse_move = Closure::wrap(Box::new(move |e: MouseEvent| {
             if e.buttons() == 1 {
                 let mut _app = app.get();
                 _app.x0 = e.client_x() - _app.x_offset;
                 _app.y0 = e.client_y() - _app.y_offset;
                 app.set(_app);
             }
-        }) as Box<dyn FnMut(web_sys::MouseEvent)>);
+        }) as Box<dyn FnMut(MouseEvent)>);
         dst_canvas.set_onmousemove(Some(mouse_move.as_ref().unchecked_ref()));
         mouse_move.forget();
     }
     // タッチイベント
     {
-        let app = app.clone();
-        let touch_move = Closure::wrap(Box::new(move |e: web_sys::TouchEvent| {
+        let app = Rc::clone(&app);
+        let touch_move = Closure::wrap(Box::new(move |e: TouchEvent| {
             let mut _app = app.get();
-            let touches = e.touches();
+            let touches: TouchList = e.touches();
             if touches.length() > 0 {
-                if let Some(touch) = touches.item(0) {
+                if let Some(touch) = touches.item(0) { // touch: Touch
                     _app.x0 = touch.client_x() - _app.x_offset;
                     _app.y0 = touch.client_y() - _app.y_offset;
                     app.set(_app);
                 }
             }
-        }) as Box<dyn FnMut(web_sys::TouchEvent)>);
+        }) as Box<dyn FnMut(TouchEvent)>);
         dst_canvas.set_ontouchstart(Some(touch_move.as_ref().unchecked_ref()));
         dst_canvas.set_ontouchend  (Some(touch_move.as_ref().unchecked_ref()));
         dst_canvas.set_ontouchmove (Some(touch_move.as_ref().unchecked_ref()));
@@ -109,15 +108,14 @@ pub fn start() -> Result<(), JsValue>
 
     // 画像読み込み
     let src_image = HtmlImageElement::new().unwrap();
-    let src_image = Rc::new(RefCell::new(src_image));
+    let src_image = Rc::new(src_image);
     {
-        let _src_image = src_image.clone();
-        let app = app.clone();
+        let _src_image = Rc::clone(&src_image);
+        let app = Rc::clone(&app);
         
         // 画像ファイル読み込み完了時の処理
-        let closure = Closure::once_into_js(move |_event: web_sys::Event| {
-            // 画像データをimg要素として取得
-            let src_image = Rc::try_unwrap(_src_image).unwrap().into_inner(); // TODO
+        // ※ Closure::wrap だとうまく動かないので Closure::once_into_js を使用 (onloadは一度きり)
+        let closure = Closure::once_into_js(move |_event: Event| {
 
             // 画面のサイズを取得
             let document = web_sys::window().unwrap().document().unwrap();
@@ -128,8 +126,8 @@ pub fn start() -> Result<(), JsValue>
             let mut _app = app.get();
 
             // 画像サイズ
-            _app.w = src_image.width();
-            _app.h = src_image.height();
+            _app.w = _src_image.width();
+            _app.h = _src_image.height();
             _app.r = _app.w as f64 * 0.6;
             _app.d = _app.r * 0.3; // 小さいほど大きく歪む
 
@@ -153,15 +151,20 @@ pub fn start() -> Result<(), JsValue>
             
             // 元画像のイメージデータを取得
             let src_canvas = document.create_element("canvas")
-                .unwrap().dyn_into::<HtmlCanvasElement>().unwrap();
+                .unwrap()
+                .dyn_into::<HtmlCanvasElement>()
+                .unwrap();
             let src_context = src_canvas.get_context("2d")
-                .unwrap().unwrap().dyn_into::<CanvasRenderingContext2d>().unwrap();
+                .unwrap()
+                .unwrap()
+                .dyn_into::<CanvasRenderingContext2d>()
+                .unwrap();
             src_canvas.set_width(_app.w);
             src_canvas.set_height(_app.h);
-            src_context.draw_image_with_html_image_element(&src_image, 0.0, 0.0).unwrap();
-            let image_data = src_context.get_image_data(0.0, 0.0, _app.w as f64, _app.h as f64).unwrap();
-            let image_data = image_data.data();
-            let image_data = image_data.deref();
+            src_context.draw_image_with_html_image_element(&_src_image, 0.0, 0.0).unwrap();
+            let image_data: ImageData = src_context.get_image_data(0.0, 0.0, _app.w as f64, _app.h as f64).unwrap();
+            let image_data: Clamped<Vec<u8>> = image_data.data();
+            let image_data: &Vec<u8> = image_data.deref();
             unsafe{
                 SRC_DATA.resize(image_data.len(), 0);
                 SRC_DATA.clone_from_slice(&image_data);
@@ -175,23 +178,21 @@ pub fn start() -> Result<(), JsValue>
                 DST_DATA.resize(size as usize, 0);
             }
             // 表示用キャンバスのオフセット座標を取得
-            let rect = dst_canvas.get_bounding_client_rect();
+            let rect: DomRect = dst_canvas.get_bounding_client_rect();
             _app.x_offset = rect.left() as i32;
             _app.y_offset = rect.top() as i32;
 
             _app.initialized = true; // 初期化完了
             app.set(_app);
-        }); // TODO
-        src_image.borrow_mut().set_onload(Some(closure.as_ref().unchecked_ref()));
-        src_image.borrow_mut().set_src("./lena_std.bmp");
-        // TODO
+        });
+        src_image.set_onload(Some(closure.as_ref().unchecked_ref()));
+        src_image.set_src("./lena_std.bmp");
     }
     // 描画更新の仕組み (JSの requestAnimationFrame 相当)
     {
-        let app = app.clone();
-        let dst_context = dst_context.clone();
+        let app = Rc::clone(&app);
         let f = Rc::new(RefCell::new(None));
-        let g = f.clone();
+        let g = Rc::clone(&f);
         *g.borrow_mut() = Some(Closure::new(move |/*param*/| {
             let mut _app = app.get();
             if _app.initialized {
@@ -213,7 +214,7 @@ fn request_animation_frame(f: &Closure<dyn FnMut(/*param*/)>) {
 }
 
 // 描画
-fn draw(_app: &mut App,dst_context: &CanvasRenderingContext2d)
+fn draw(_app: &mut App, dst_context: &CanvasRenderingContext2d)
 {
     let w = _app.w as i32;
     let h = _app.h as i32;
@@ -277,8 +278,8 @@ fn draw(_app: &mut App,dst_context: &CanvasRenderingContext2d)
         }
     }
     unsafe{
-        let dst_data = Clamped(&DST_DATA[..]);
-        let dst_data = ImageData::new_with_u8_clamped_array_and_sh(dst_data, _app.w2, _app.h2).unwrap();
+        let dst_data: Clamped<&[u8]> = Clamped(&DST_DATA[..]);
+        let dst_data: ImageData = ImageData::new_with_u8_clamped_array_and_sh(dst_data, _app.w2, _app.h2).unwrap();
         dst_context.put_image_data(&dst_data, 0.0, 0.0).unwrap();
     }
 
