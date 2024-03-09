@@ -4,11 +4,11 @@ use std::cell::RefCell;
 use std::ops::Deref;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::console;
 use web_sys::{HtmlCanvasElement, HtmlImageElement};
 use web_sys::{CanvasRenderingContext2d, ImageData, DomRect};
 use web_sys::{Event, MouseEvent, TouchEvent, TouchList};
 use wasm_bindgen::Clamped;
+// use web_sys::console; // デバッグ用
 
 // 定数
 const BLACK: [u8; 4] = [0, 0, 0, 255]; // 黒色
@@ -114,8 +114,8 @@ pub fn start() -> Result<(), JsValue>
         let app = Rc::clone(&app);
         
         // 画像ファイル読み込み完了時の処理
-        // ※ Closure::wrap だとうまく動かないので Closure::once_into_js を使用 (onloadは一度きり)
-        let closure = Closure::once_into_js(move |_event: Event| {
+//      let closure = Closure::wrap(Box::new(move |_event: Event| {
+        let closure = Closure::once_into_js(move |_event: Event| { // onloadは一度きり
 
             // 画面のサイズを取得
             let document = web_sys::window().unwrap().document().unwrap();
@@ -184,9 +184,13 @@ pub fn start() -> Result<(), JsValue>
 
             _app.initialized = true; // 初期化完了
             app.set(_app);
+            
+//      }) as Box<dyn FnMut(Event)>);
         });
+        
         src_image.set_onload(Some(closure.as_ref().unchecked_ref()));
         src_image.set_src("./lena_std.bmp");
+//      closure.forget(); // Closure::once_into_js であれば不要
     }
     // 描画更新の仕組み (JSの requestAnimationFrame 相当)
     {
@@ -235,13 +239,13 @@ fn draw(_app: &mut App, dst_context: &CanvasRenderingContext2d)
     if (x0 == _app.x0_prev) && (y0 == _app.y0_prev) {
         return;
     }
-    // console::log_1(&JsValue::from_str(&format!("{} {} -> {} {}",_app.x0_prev, _app.y0_prev, x0, y0)));
+//  console::log_1(&JsValue::from_str(&format!("{} {}", x0, y0)));
     _app.x0 = x0;
     _app.y0 = y0;
     _app.x0_prev = x0;
     _app.y0_prev = y0;
 
-    let start_time = js_sys::Date::now();
+//  let start_time = js_sys::Date::now();
 
     // 写像後の座標
     for y in 0..h2 {
@@ -283,9 +287,9 @@ fn draw(_app: &mut App, dst_context: &CanvasRenderingContext2d)
         dst_context.put_image_data(&dst_data, 0.0, 0.0).unwrap();
     }
 
-    let end_time = js_sys::Date::now();
-    let elapsed_time = end_time - start_time;
-    console::log_1(&JsValue::from_str(&format!("draw in {} msec", elapsed_time)));
+//  let end_time = js_sys::Date::now();
+//  let elapsed_time = end_time - start_time;
+//  console::log_1(&JsValue::from_str(&format!("draw in {} msec", elapsed_time)));
 }
 
 // 線形補間

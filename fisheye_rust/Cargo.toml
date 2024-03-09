@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["lipoyang"]
 description = "魚眼変換"
 license = "MIT/Apache-2.0"
-repository = "https://github.com/lipoyang/hello-wasm"
+repository = "https://github.com/lipoyang/fisheye_examples"
 edition = "2018"
 
 [lib]
