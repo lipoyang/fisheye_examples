@@ -54,5 +54,5 @@
 ## Rust (WebAssembly)
 - Webアプリ (上記の JavaScript版のWebアプリと同等の動作)
 - Rust → WebAssembly のビルドには wasm-pack を使用
-- Chromeで動作確認 (VSCode の Live Server でホスト可能)
+- Chromeで動作確認 (VSCode の Live Server でホスト可能。そのためデバッガの設定でポート番号5500にしている。)
 - 画像データのRGBA値が並んだ一次元配列 Vec<u8> は static mut で定義し、unsafe で処理している。
