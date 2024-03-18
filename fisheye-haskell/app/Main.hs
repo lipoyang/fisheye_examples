@@ -2,14 +2,12 @@ module Main(main) where
 
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Interact -- Event
--- import Graphics.Gloss.Internals TODO
--- import Graphics.Gloss.Interface.IO.Game
--- import qualified Data.ByteString.Internal() -- as BS -- (fromForeignPtr)
--- import Foreign.ForeignPtr() -- (ForeignPtr, withForeignPtr)
--- import Foreign.Ptr() -- (plusPtr)
 import Codec.Picture
-import Data.Word (Word8)
-import qualified Data.ByteString as BS
+import Data.Word (Word8, Word32)
+-- import qualified Data.ByteString as BS
+import qualified Data.ByteString.Builder as BB
+import qualified Data.ByteString.Lazy as BL
+import qualified Data.Vector as V
 import qualified Data.Vector.Storable as VS
 -- import Text.Printf (printf) -- デバッグ用
 -- import Debug.Trace (trace)  -- デバッグ用
@@ -33,25 +31,20 @@ data AppState = AppState
   , _y0 :: Float      -- レンズの中心の y 座標 TODO Intに
   , _x0_prev :: Float -- レンズの中心の x 座標の前回値 TODO Intに
   , _y0_prev :: Float -- レンズの中心の y 座標の前回値 TODO Intに
-  , _srcData :: VS.Vector Word8 --[Word8] -- 元画像データ
-  , _dstData :: VS.Vector Word8 --[Word8] -- 表示画像データ
+  , _srcData :: VS.Vector Word8 -- 元画像データ
+  , _dstImg :: Picture   -- 表示画像
   , _isMouseDown :: Bool -- マウスを押下しているか
   }
 
 -- 初期値
 initialState :: AppState
-initialState = AppState 0 0 0 0 0 0 0 0 VS.empty VS.empty False
+initialState = AppState 0 0 0 0 0 0 0 0 VS.empty (rectangleSolid 1 1) False
 
 --------------------------
 -- 描画
 --------------------------
 onDraw :: AppState -> Picture
-onDraw app = img
-  where
-    w = _W app
-    h = _H app
-    bstr = BS.pack $ VS.toList $ _dstData app -- [VS.Vector Word8] -> ByteString
-    img = bitmapOfByteString w h (BitmapFormat TopToBottom PxRGBA) bstr True
+onDraw = _dstImg   -- ※ onDraw app = _dstImg app と同義
 
 --------------------------
 -- イベント処理
@@ -134,30 +127,36 @@ getRGBAfromDynamicImage img = imgW8Vec --imgW8List
 --------------------------
 -- 魚眼変換
 --------------------------
+
+-- Vector Word32 を ByteStringに変換
+vectorToByteString :: V.Vector Word32 -> BL.ByteString
+vectorToByteString vec = BB.toLazyByteString $ mconcat $ map BB.word32BE $ V.toList vec
+
 -- 画像の魚眼変換
 updateFisheye :: AppState -> AppState
 updateFisheye app = app'
   where
     w = _W app
     h = _H app
-    rgba = [fisheye app (x, y) | y <- [0..h-1], x <- [0..w-1]]
-    dstData = VS.fromList $ flattenTupleList rgba
-    app' = app{_dstData = dstData}
 
--- (R,G,B,A) のリストをフラットなリストに変換
-flattenTupleList :: [(Word8, Word8, Word8, Word8)] -> [Word8]
-flattenTupleList tupleList = [item | (a, b, c, d) <- tupleList, item <- [a, b, c, d]]
+    fisheye' = fisheye app
+    dstData = vectorToByteString ( V.fromList (map fisheye' [0..h*w-1]) )
+    dstData2 = BL.toStrict dstData
+    img = bitmapOfByteString w h (BitmapFormat TopToBottom PxRGBA) dstData2 True
 
--- 魚眼変換の計算： 写像後の座標 (x, y) -> RGBA値 (r, g, b, a)
-fisheye :: AppState -> (Int, Int) -> (Word8, Word8, Word8, Word8)
-fisheye app (ix, iy) = (r, g, b, a)
+    app' = app{_dstImg = img}
+
+-- 魚眼変換の計算： n番目の画素 -> 32ビットRGBA値
+fisheye :: AppState -> Int -> Word32
+fisheye app n = c
   where
     rad = _R app
     d   = _D app
     w   = fromIntegral (_W app)
     h   = fromIntegral (_H app)
-    x   = fromIntegral ix
-    y   = fromIntegral iy
+    --  写像後の座標 (x, y)
+    x   = fromIntegral (n `mod` _W app)
+    y   = fromIntegral (n `div` _W app)
     x0  = _x0 app
     y0  = _y0 app
     -- レンズの中心からの相対座標
@@ -186,12 +185,15 @@ fisheye app (ix, iy) = (r, g, b, a)
       else 
         -- レンズの外側なら黒塗り
         (0, 0, 0, 255) -- TODO BLACK
+        
+    -- 32ビットRGBA値
+    c = fromIntegral $ r * 0x1000000 + g * 0x10000 + b * 0x100 + a
 
 --------------------------
 -- 線形補間
 --------------------------
 -- 写像前の座標 (x, y) -> RGBA値 (r, g, b, a)
-interpolation :: AppState -> (Float, Float) -> (Word8, Word8, Word8, Word8)
+interpolation :: AppState -> (Float, Float) -> (Int, Int, Int, Int) -- TODO Word32へ 
 interpolation app (x, y) = (r, g, b, 255)
   where
     -- 座標の整数部
@@ -223,7 +225,7 @@ getPixel app (x, y) = (r, g, b)
     y' = if y >= h then h-1 else y
     index = (y' * w + x') * 4;
     srcData = _srcData app
-    r = fromIntegral $ VS.unsafeIndex srcData index
+    r = fromIntegral $ VS.unsafeIndex srcData  index
     g = fromIntegral $ VS.unsafeIndex srcData (index + 1)
     b = fromIntegral $ VS.unsafeIndex srcData (index + 2)
 
@@ -259,4 +261,4 @@ main = do
   -- playモードを実行 (イベントと時間による状態遷移あり)
   -- 引数: ウィンドウ, 1秒あたりのステップ数, 初期状態, 
   --       状態の描画関数, イベントによる状態遷移関数, 時間による状態遷移関数
-  play window white 20 initialState3 onDraw onEvents onTimer
+  play window white 10 initialState3 onDraw onEvents onTimer
