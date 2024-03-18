@@ -17,14 +17,9 @@ import qualified Data.Vector.Storable as VS
 -------------------
 -- 画面の設定
 -------------------
-
-windowW, windowH :: Num a => a
-windowW = 532
-windowH = 532
-
--- ウィンドウ種別, タイトル, サイズ, 表示位置
+-- 画面種別(ウィンドウ), タイトル, サイズ, 表示位置
 window :: Display
-window = InWindow "魚眼変換" (windowW, windowH) (100, 100)
+window = InWindow "魚眼変換" (532, 532) (100, 100)
 
 --------------------------
 -- アプリケーションの状態
@@ -38,10 +33,6 @@ data AppState = AppState
   , _y0 :: Float      -- レンズの中心の y 座標 TODO Intに
   , _x0_prev :: Float -- レンズの中心の x 座標の前回値 TODO Intに
   , _y0_prev :: Float -- レンズの中心の y 座標の前回値 TODO Intに
-  , _x_up :: Float   -- 左ボタン非押下時のマウス x 座標 TODO Intに
-  , _y_up :: Float   -- 左ボタン非押下時のマウス y 座標 TODO Intに
-  , _x_offset :: Float -- 画像のウインドウ上での x オフセット
-  , _y_offset :: Float -- 画像のウインドウ上での y オフセット
   , _srcData :: VS.Vector Word8 --[Word8] -- 元画像データ
   , _dstData :: VS.Vector Word8 --[Word8] -- 表示画像データ
   , _isMouseDown :: Bool -- マウスを押下しているか
@@ -49,7 +40,7 @@ data AppState = AppState
 
 -- 初期値
 initialState :: AppState
-initialState = AppState 0 0 0 0 0 0 0 0 0 0 0 0 VS.empty VS.empty False
+initialState = AppState 0 0 0 0 0 0 0 0 VS.empty VS.empty False
 
 --------------------------
 -- 描画
@@ -66,28 +57,36 @@ onDraw app = img
 -- イベント処理
 --------------------------
 onEvents :: Event -> AppState -> AppState
-onEvents (EventKey key ks _ _) app = onMouseButton key ks app
+onEvents (EventKey key ks _ (x, y)) app = onMouseButton key ks x y app
 onEvents (EventMotion (x, y))  app = onMouseMove x y app
 onEvents (EventResize _)       app = app
 
 -- マウスの左ボタンUP/DOWN
-onMouseButton :: Key -> KeyState -> AppState -> AppState
-onMouseButton (MouseButton LeftButton) ks = if ks == Down then onMouseDown else onMouseUp 
-onMouseButton _ _ = id
+onMouseButton :: Key -> KeyState -> Float -> Float -> AppState -> AppState
+onMouseButton (MouseButton LeftButton) ks x y = if ks == Down then onMouseDown x y  else onMouseUp x y
+onMouseButton _ _ _ _ = id -- マウスの左ボタン以外のボタン、キーは無視
 -- UP
-onMouseUp:: AppState -> AppState
-onMouseUp app = app{_isMouseDown = False}
+onMouseUp:: Float -> Float -> AppState -> AppState
+onMouseUp x y app = app{_isMouseDown = False, _x0 = x0, _y0 = y0}
+  where (x0, y0) = mouseCoordinate x y app
 -- DOWN
-onMouseDown:: AppState -> AppState
-onMouseDown app = app{_isMouseDown = True, _x0 = _x_up app, _y0 = _y_up app}
+onMouseDown:: Float -> Float -> AppState -> AppState
+onMouseDown x y app = app{_isMouseDown = True, _x0 = x0, _y0 = y0}
+  where (x0, y0) = mouseCoordinate x y app
 -- マウスの移動
 onMouseMove:: Float -> Float -> AppState -> AppState
-onMouseMove x y app = if _isMouseDown app then app{_x0 = x'', _y0 = y''} else app{_x_up = x'', _y_up = y''}
+onMouseMove x y app = if _isMouseDown app then app{_x0 = x0, _y0 = y0} else app
+  where (x0, y0) = mouseCoordinate x y app
+
+-- マウス座標の変換
+-- Gloss では画面中央が原点で、Y軸は上向きが正であることに注意
+mouseCoordinate :: Float -> Float -> AppState -> (Float, Float)
+mouseCoordinate x y app = (x'', y'')
   where
     w = fromIntegral (_W app)
     h = fromIntegral (_H app)
-    x' = windowW / 2 + x - _x_offset app
-    y' = windowH / 2 - y - _y_offset app
+    x' = w / 2 + x
+    y' = h / 2 - y
     x''
       | x' <  0   = 0
       | x' >= w   = w - 1
@@ -242,8 +241,6 @@ main = do
       h = dynamicMap imageHeight srcImg
       r = fromIntegral w * 0.6
       d = r * 0.3 -- 小さいほど大きく歪む
-      x_offset = (windowW - fromIntegral w) / 2
-      y_offset = (windowH - fromIntegral h) / 2
 
   -- レンズの中心座標の初期値は中央
   let x0 = fromIntegral w / 2
@@ -252,11 +249,9 @@ main = do
   -- アプリケーションの初期状態を設定
   let initialState2 = initialState{
       _srcData = srcData,
-      _W = w, _H = h, _R = r, _D = d, _x0 = x0, _y0 = y0,
-      _x_offset = x_offset, _y_offset = y_offset
+      _W = w, _H = h, _R = r, _D = d, _x0 = x0, _y0 = y0
     }
-  -- let format = "W:%d, H:%d, R:%.1f D:%.1f x0:%.1f y0:%.1f x_offset:%.1f y_offset:%.1f\n"
-  -- printf format w h r d x0 y0 x_offset y_offset
+  -- printf "W:%d, H:%d, R:%.1f D:%.1f x0:%.1f y0:%.1f\n" w h r d x0 y0
   
   -- 助期状態の魚眼画像を計算
   let initialState3 = updateFisheye initialState2
