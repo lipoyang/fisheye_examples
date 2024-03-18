@@ -1,21 +1,18 @@
 module Main(main) where
 
 import Graphics.Gloss
--- import Graphics.Gloss.Internals TTODO
+import Graphics.Gloss.Interface.IO.Interact -- Event
+-- import Graphics.Gloss.Internals TODO
 -- import Graphics.Gloss.Interface.IO.Game
-import Graphics.Gloss.Interface.IO.Interact
--- import Data.ByteString -- (ByteString)
---import qualified Data.ByteString.Internal() -- as BS -- (fromForeignPtr)
+-- import qualified Data.ByteString.Internal() -- as BS -- (fromForeignPtr)
 -- import Foreign.ForeignPtr() -- (ForeignPtr, withForeignPtr)
 -- import Foreign.Ptr() -- (plusPtr)
-import qualified Data.ByteString as BS
 import Codec.Picture
-import Data.Word
+import Data.Word (Word8)
+import qualified Data.ByteString as BS
 import qualified Data.Vector.Storable as VS
-import Text.Printf -- デバッグ用
-import Debug.Trace
-import Control.Arrow (ArrowApply(app))
-import qualified Data.Vector as V
+-- import Text.Printf (printf) -- デバッグ用
+-- import Debug.Trace (trace)  -- デバッグ用
 
 -------------------
 -- 画面の設定
@@ -52,7 +49,6 @@ data AppState = AppState
 
 -- 初期値
 initialState :: AppState
---initialState = AppState 0 0 0 0 0 0 0 0 0 0 0 0 [] [] False
 initialState = AppState 0 0 0 0 0 0 0 0 0 0 0 0 VS.empty VS.empty False
 
 --------------------------
@@ -63,7 +59,6 @@ onDraw app = img
     where
         w = _W app
         h = _H app
-      -- bstr = BS.pack (_dstData app) -- [Word8] -> ByteString
         bstr = BS.pack $ VS.toList $ _dstData app -- [VS.Vector Word8] -> ByteString
         img = bitmapOfByteString w h (BitmapFormat TopToBottom PxRGBA) bstr True
 
@@ -73,7 +68,7 @@ onDraw app = img
 onEvents :: Event -> AppState -> AppState
 onEvents (EventKey key ks _ _) app = onMouseButton key ks app
 onEvents (EventMotion (x, y))  app = onMouseMove x y app
-onEvents (EventResize _)       app = app -- TODO x0_offset, y0_offset
+onEvents (EventResize _)       app = app
 
 -- マウスの左ボタンUP/DOWN
 onMouseButton :: Key -> KeyState -> AppState -> AppState
@@ -116,7 +111,7 @@ onTimer _ app = app_next -- 引数 Δt は使用しない
       app_next = if (x0 == x0_prev) && (y0 == y0_prev)
         then app -- レンズの中心座標が変化していなければ魚眼画像を更新しない
         else updateFisheye app' -- 魚眼画像を更新
-          where app' = trace ("x = " ++ show x0 ++ "y = " ++ show y0) app { _x0_prev = x0, _y0_prev = y0 }
+          where app' = app { _x0_prev = x0, _y0_prev = y0 }
 
 --------------------------
 -- Bitmap画像の読み込み
@@ -136,32 +131,25 @@ getRGBAfromDynamicImage img = imgW8Vec --imgW8List
     where
         imgRGBA   = convertRGBA8 img    -- DynamicImage -> Image PixelRGBA8
         imgW8Vec  = imageData imgRGBA   -- Image PixelRGBA8 -> Vector Word8
-        --imgW8List = VS.toList imgW8Vec  -- Vector Word8 -> [Word8]
 
 --------------------------
 -- 魚眼変換
 --------------------------
--- 魚眼変換
+-- 画像の魚眼変換
 updateFisheye :: AppState -> AppState
 updateFisheye app = app'
   where
     w = _W app
     h = _H app
     rgba = [fisheye app (x, y) | y <- [0..h-1], x <- [0..w-1]]
-    -- dstData = _srcData app 
---  dstData = flattenTupleList rgba --_srcData app 
-    dstData = VS.fromList $ flattenTupleList rgba --_srcData app 
+    dstData = VS.fromList $ flattenTupleList rgba
     app' = app{_dstData = dstData}
 
 -- (R,G,B,A) のリストをフラットなリストに変換
 flattenTupleList :: [(Word8, Word8, Word8, Word8)] -> [Word8]
 flattenTupleList tupleList = [item | (a, b, c, d) <- tupleList, item <- [a, b, c, d]]
 
--- flattenTuplesToVector :: [(Word8, Word8, Word8, Word8)] -> VS.Vector Word8
--- flattenTuplesToVector tuples = VS.concatMap (\(a, b, c, d) -> VS.fromList [a, b, c, d]) $ VS.fromList tuples
-
-
--- 写像後の座標 (x, y) -> RGBA値 (r, g, b, a)
+-- 魚眼変換の計算： 写像後の座標 (x, y) -> RGBA値 (r, g, b, a)
 fisheye :: AppState -> (Int, Int) -> (Word8, Word8, Word8, Word8)
 fisheye app (ix, iy) = (r, g, b, a)
   where
@@ -192,8 +180,6 @@ fisheye app (ix, iy) = (r, g, b, a)
         in
         if x' >= 0 && x' < w && y' >= 0 && y' < h then
           -- 元画像から線形補間で色を取得
-          -- hoge (getPixel app (truncate x', truncate y'))
-          -- (255, 0, 0, 255) 
           interpolation app (x', y')
         else
           -- 元画像の外側なら黒塗り
@@ -201,9 +187,6 @@ fisheye app (ix, iy) = (r, g, b, a)
       else 
         -- レンズの外側なら黒塗り
         (0, 0, 0, 255) -- TODO BLACK
-
-hoge:: (Float, Float, Float) -> (Word8, Word8, Word8, Word8)
-hoge (r, g, b) = (truncate r, truncate g, truncate b, 255)
 
 --------------------------
 -- 線形補間
@@ -266,19 +249,17 @@ main = do
   let x0 = fromIntegral w / 2
       y0 = fromIntegral h / 2
 
-  -- 表示画像
-  let dstData = srcData -- generateZeroWord8List len TODO
-
   -- アプリケーションの初期状態を設定
-  let initialState' = initialState{
-      _srcData = srcData, _dstData = dstData,
+  let initialState2 = initialState{
+      _srcData = srcData,
       _W = w, _H = h, _R = r, _D = d, _x0 = x0, _y0 = y0,
       _x_offset = x_offset, _y_offset = y_offset
     }
-  let format = "W:%d, H:%d, R:%.1f D:%.1f x0:%.1f y0:%.1f x_offset:%.1f y_offset:%.1f\n"
-  printf format w h r d x0 y0 x_offset y_offset -- TODO
-
-  let initialState3 = updateFisheye initialState'
+  -- let format = "W:%d, H:%d, R:%.1f D:%.1f x0:%.1f y0:%.1f x_offset:%.1f y_offset:%.1f\n"
+  -- printf format w h r d x0 y0 x_offset y_offset
+  
+  -- 助期状態の魚眼画像を計算
+  let initialState3 = updateFisheye initialState2
 
   -- playモードを実行 (イベントと時間による状態遷移あり)
   -- 引数: ウィンドウ, 1秒あたりのステップ数, 初期状態, 

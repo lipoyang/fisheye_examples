@@ -1,3 +1,4 @@
+-- このプロジェクトでは不使用
 module Lib
     ( someFunc
     ) where
