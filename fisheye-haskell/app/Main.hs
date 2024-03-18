@@ -13,6 +13,12 @@ import qualified Data.Vector.Storable as VS
 -- import Debug.Trace (trace)  -- デバッグ用
 
 -------------------
+-- 定数
+-------------------
+_black :: Word32 -- 32ビットRGBA値 黒色
+_black = 0xff
+
+-------------------
 -- 画面の設定
 -------------------
 -- 画面種別(ウィンドウ), タイトル, サイズ, 表示位置
@@ -35,10 +41,6 @@ data AppState = AppState
   , _dstImg :: Picture   -- 表示画像
   , _isMouseDown :: Bool -- マウスを押下しているか
   }
-
--- 初期値
-initialState :: AppState
-initialState = AppState 0 0 0 0 0 0 0 0 VS.empty (rectangleSolid 1 1) False
 
 --------------------------
 -- 描画
@@ -118,19 +120,15 @@ loadDynamicImage filePath = do
     Right img -> return img
 
 -- Bitmap画像からRGBAのバイト列を取得
-getRGBAfromDynamicImage :: DynamicImage -> VS.Vector Word8 --[Word8]
-getRGBAfromDynamicImage img = imgW8Vec --imgW8List
+getRGBAfromDynamicImage :: DynamicImage -> VS.Vector Word8
+getRGBAfromDynamicImage img = imgVecW8
   where
-    imgRGBA   = convertRGBA8 img    -- DynamicImage -> Image PixelRGBA8
-    imgW8Vec  = imageData imgRGBA   -- Image PixelRGBA8 -> Vector Word8
+    imgRGBA8 = convertRGBA8 img    -- DynamicImage -> Image PixelRGBA8
+    imgVecW8 = imageData imgRGBA8  -- Image PixelRGBA8 -> Vector Word8
 
 --------------------------
 -- 魚眼変換
 --------------------------
-
--- Vector Word32 を ByteStringに変換
-vectorToByteString :: V.Vector Word32 -> BL.ByteString
-vectorToByteString vec = BB.toLazyByteString $ mconcat $ map BB.word32BE $ V.toList vec
 
 -- 画像の魚眼変換
 updateFisheye :: AppState -> AppState
@@ -138,13 +136,18 @@ updateFisheye app = app'
   where
     w = _W app
     h = _H app
-
+    -- 魚眼変換の関数に状態を部分適用
     fisheye' = fisheye app
+    -- 全画素の 魚眼変換の 32ビットRGBA値を リスト → Vector → ByteString に変換
     dstData = vectorToByteString ( V.fromList (map fisheye' [0..h*w-1]) )
-    dstData2 = BL.toStrict dstData
-    img = bitmapOfByteString w h (BitmapFormat TopToBottom PxRGBA) dstData2 True
-
+    dstData' = BL.toStrict dstData -- BL.ByteString → ふつうのByteString
+    -- ByteStringから画像を生成
+    img = bitmapOfByteString w h (BitmapFormat TopToBottom PxRGBA) dstData' True
     app' = app{_dstImg = img}
+
+-- Vector Word32 を BL.ByteStringに変換 (ビッグエンディアン)
+vectorToByteString :: V.Vector Word32 -> BL.ByteString
+vectorToByteString vec = BB.toLazyByteString $ mconcat $ map BB.word32BE $ V.toList vec
 
 -- 魚眼変換の計算： n番目の画素 -> 32ビットRGBA値
 fisheye :: AppState -> Int -> Word32
@@ -164,7 +167,7 @@ fisheye app n = c
     dy = y - y0
     d' = sqrt (dx*dx + dy*dy)
 
-    (r, g, b, a) =
+    c =
       if d' < rad then
         -- 写像:元画像→魚眼画像
         -- X = R*x/√(D^2+x^2+y^2)
@@ -180,21 +183,16 @@ fisheye app n = c
           -- 元画像から線形補間で色を取得
           interpolation app (x', y')
         else
-          -- 元画像の外側なら黒塗り
-          (0, 0, 0, 255) -- TODO BLACK
-      else 
-        -- レンズの外側なら黒塗り
-        (0, 0, 0, 255) -- TODO BLACK
-        
-    -- 32ビットRGBA値
-    c = fromIntegral $ r * 0x1000000 + g * 0x10000 + b * 0x100 + a
+          _black  -- 元画像の外側なら黒塗り
+      else
+        _black  -- レンズの外側なら黒塗り
 
 --------------------------
 -- 線形補間
 --------------------------
--- 写像前の座標 (x, y) -> RGBA値 (r, g, b, a)
-interpolation :: AppState -> (Float, Float) -> (Int, Int, Int, Int) -- TODO Word32へ 
-interpolation app (x, y) = (r, g, b, 255)
+-- 写像前の座標 (x, y) -> 32ビットRGBA値
+interpolation :: AppState -> (Float, Float) -> Word32 
+interpolation app (x, y) = c
   where
     -- 座標の整数部
     x' = truncate x
@@ -211,9 +209,12 @@ interpolation app (x, y) = (r, g, b, 255)
     mdX = 1 - dX;
     mdY = 1 - dY;
     -- 線形補間
+    r,g,b::Int
     r = round(mdX * (mdY * r00 + dY * r01) + dX * (mdY * r10 + dY * r11))
     g = round(mdX * (mdY * g00 + dY * g01) + dX * (mdY * g10 + dY * g11))
     b = round(mdX * (mdY * b00 + dY * b01) + dX * (mdY * b10 + dY * b11))
+    -- 32ビットRGBA値 (A=255)
+    c = fromIntegral ( r * 0x1000000 + g * 0x10000 + b * 0x100 + 0xff )
 
 -- 写像前の座標 (x, y) -> RGBA値 (r, g, b)
 getPixel :: AppState -> (Int, Int) -> (Float, Float, Float)
@@ -248,17 +249,15 @@ main = do
   let x0 = fromIntegral w / 2
       y0 = fromIntegral h / 2
 
-  -- アプリケーションの初期状態を設定
-  let initialState2 = initialState{
-        _srcData = srcData,
-        _W = w, _H = h, _R = r, _D = d, _x0 = x0, _y0 = y0
-      }
-  -- printf "W:%d, H:%d, R:%.1f D:%.1f x0:%.1f y0:%.1f\n" w h r d x0 y0
+  -- アプリケーションの初期状態  (※ dstImgの初期値はダミー)
+  let initialState = AppState w h r d x0 y0 0 0 srcData (rectangleSolid 1 1) False
   
   -- 助期状態の魚眼画像を計算
-  let initialState3 = updateFisheye initialState2
+  let initialState' = updateFisheye initialState
+
+  -- printf "W:%d, H:%d, R:%.1f D:%.1f x0:%.1f y0:%.1f\n" w h r d x0 y0
 
   -- playモードを実行 (イベントと時間による状態遷移あり)
   -- 引数: ウィンドウ, 1秒あたりのステップ数, 初期状態, 
   --       状態の描画関数, イベントによる状態遷移関数, 時間による状態遷移関数
-  play window white 10 initialState3 onDraw onEvents onTimer
+  play window white 10 initialState' onDraw onEvents onTimer
