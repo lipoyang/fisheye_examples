@@ -47,11 +47,11 @@ initialState = AppState 0 0 0 0 0 0 0 0 VS.empty VS.empty False
 --------------------------
 onDraw :: AppState -> Picture
 onDraw app = img
-    where
-        w = _W app
-        h = _H app
-        bstr = BS.pack $ VS.toList $ _dstData app -- [VS.Vector Word8] -> ByteString
-        img = bitmapOfByteString w h (BitmapFormat TopToBottom PxRGBA) bstr True
+  where
+    w = _W app
+    h = _H app
+    bstr = BS.pack $ VS.toList $ _dstData app -- [VS.Vector Word8] -> ByteString
+    img = bitmapOfByteString w h (BitmapFormat TopToBottom PxRGBA) bstr True
 
 --------------------------
 -- イベント処理
@@ -101,16 +101,16 @@ mouseCoordinate x y app = (x'', y'')
 --------------------------
 onTimer :: Float -> AppState -> AppState
 onTimer _ app = app_next -- 引数 Δt は使用しない
-    where
-      x0 = _x0 app
-      y0 = _y0 app
-      x0_prev = _x0_prev app
-      y0_prev = _y0_prev app
-      
-      app_next = if (x0 == x0_prev) && (y0 == y0_prev)
-        then app -- レンズの中心座標が変化していなければ魚眼画像を更新しない
-        else updateFisheye app' -- 魚眼画像を更新
-          where app' = app { _x0_prev = x0, _y0_prev = y0 }
+  where
+    x0 = _x0 app
+    y0 = _y0 app
+    x0_prev = _x0_prev app
+    y0_prev = _y0_prev app
+    
+    app_next = if (x0 == x0_prev) && (y0 == y0_prev)
+      then app -- レンズの中心座標が変化していなければ魚眼画像を更新しない
+      else updateFisheye app' -- 魚眼画像を更新
+        where app' = app { _x0_prev = x0, _y0_prev = y0 }
 
 --------------------------
 -- Bitmap画像の読み込み
@@ -119,17 +119,17 @@ onTimer _ app = app_next -- 引数 Δt は使用しない
 -- Bitmapファイルの読み込み
 loadDynamicImage :: FilePath -> IO DynamicImage
 loadDynamicImage filePath = do
-    eitherImage <- readBitmap filePath
-    case eitherImage of
-        Left err -> error $ "Error reading bitmap: " ++ err
-        Right img -> return img
+  eitherImage <- readBitmap filePath
+  case eitherImage of
+    Left err -> error $ "Error reading bitmap: " ++ err
+    Right img -> return img
 
 -- Bitmap画像からRGBAのバイト列を取得
 getRGBAfromDynamicImage :: DynamicImage -> VS.Vector Word8 --[Word8]
 getRGBAfromDynamicImage img = imgW8Vec --imgW8List
-    where
-        imgRGBA   = convertRGBA8 img    -- DynamicImage -> Image PixelRGBA8
-        imgW8Vec  = imageData imgRGBA   -- Image PixelRGBA8 -> Vector Word8
+  where
+    imgRGBA   = convertRGBA8 img    -- DynamicImage -> Image PixelRGBA8
+    imgW8Vec  = imageData imgRGBA   -- Image PixelRGBA8 -> Vector Word8
 
 --------------------------
 -- 魚眼変換
@@ -248,9 +248,9 @@ main = do
 
   -- アプリケーションの初期状態を設定
   let initialState2 = initialState{
-      _srcData = srcData,
-      _W = w, _H = h, _R = r, _D = d, _x0 = x0, _y0 = y0
-    }
+        _srcData = srcData,
+        _W = w, _H = h, _R = r, _D = d, _x0 = x0, _y0 = y0
+      }
   -- printf "W:%d, H:%d, R:%.1f D:%.1f x0:%.1f y0:%.1f\n" w h r d x0 y0
   
   -- 助期状態の魚眼画像を計算
@@ -259,4 +259,4 @@ main = do
   -- playモードを実行 (イベントと時間による状態遷移あり)
   -- 引数: ウィンドウ, 1秒あたりのステップ数, 初期状態, 
   --       状態の描画関数, イベントによる状態遷移関数, 時間による状態遷移関数
-  play window white 10 initialState3 onDraw onEvents onTimer
+  play window white 20 initialState3 onDraw onEvents onTimer
