@@ -19,6 +19,7 @@
 - [Java (Android)](./fisheye_android/)
 - [C++ (Qt)](./fisheye_qt/)
 - [Rust (WebAssembly)](./fisheye_rust/)
+- [Haskell](./fisheye-haskell/)
 
 ## Processing
 - Processing 4.3 で動作確認
@@ -56,3 +57,9 @@
 - Rust → WebAssembly のビルドには wasm-pack を使用
 - Chromeで動作確認 (VSCode の Live Server でホスト可能。そのためデバッガの設定でポート番号5500にしている。)
 - 画像データのRGBA値が並んだ一次元配列 Vec<u8> は static mut で定義し、unsafe で処理している。
+
+## Haskell
+- Stack 2.13.1 / GHC 9.4.8 (x86_64) で作成/動作確認 (Windows版アプリ)
+- グラフィックライブラリは gloss を使用
+- 写像元の画像データは、RGBA値が並んだ一次元配列 Vector Word8 で取得
+- 写像先の画像データは、写像関数を map で処理してRGBA値のリスト \[Word32\] を得て、それをバイト列 ByteString に変換
