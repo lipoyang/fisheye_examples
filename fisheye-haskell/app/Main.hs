@@ -33,12 +33,12 @@ data AppState = AppState
   , _H :: Int         -- 元画像の高さ
   , _R :: Float       -- レンズの半径
   , _D :: Float       -- レンズの中心から投影面までの距離 
-  , _x0 :: Float      -- レンズの中心の x 座標 TODO Intに
-  , _y0 :: Float      -- レンズの中心の y 座標 TODO Intに
-  , _x0_prev :: Float -- レンズの中心の x 座標の前回値 TODO Intに
-  , _y0_prev :: Float -- レンズの中心の y 座標の前回値 TODO Intに
+  , _x0 :: Float      -- レンズの中心の x 座標
+  , _y0 :: Float      -- レンズの中心の y 座標
+  , _x0_prev :: Float -- レンズの中心の x 座標の前回値
+  , _y0_prev :: Float -- レンズの中心の y 座標の前回値
   , _srcData :: VS.Vector Word8 -- 元画像データ
-  , _dstImg :: Picture   -- 表示画像
+  , _dstImg  :: Picture  -- 表示画像
   , _isMouseDown :: Bool -- マウスを押下しているか
   }
 
@@ -53,8 +53,8 @@ onDraw = _dstImg   -- ※ onDraw app = _dstImg app と同義
 --------------------------
 onEvents :: Event -> AppState -> AppState
 onEvents (EventKey key ks _ (x, y)) app = onMouseButton key ks x y app
-onEvents (EventMotion (x, y))  app = onMouseMove x y app
-onEvents (EventResize _)       app = app
+onEvents (EventMotion (x, y))       app = onMouseMove x y app
+onEvents (EventResize _)            app = app
 
 -- マウスの左ボタンUP/DOWN
 onMouseButton :: Key -> KeyState -> Float -> Float -> AppState -> AppState
@@ -91,9 +91,9 @@ mouseCoordinate x y app = (x'', y'')
       | y' >= h   = h - 1
       | otherwise = y'
 
---------------------------
--- 状態の時間変化
---------------------------
+----------------------------------
+-- 状態の時間変化 (ステップ周期処理)
+----------------------------------
 onTimer :: Float -> AppState -> AppState
 onTimer _ app = app_next -- 引数 Δt は使用しない
   where
@@ -116,7 +116,7 @@ loadDynamicImage :: FilePath -> IO DynamicImage
 loadDynamicImage filePath = do
   eitherImage <- readBitmap filePath
   case eitherImage of
-    Left err -> error $ "Error reading bitmap: " ++ err
+    Left  err -> error $ "Error reading bitmap: " ++ err
     Right img -> return img
 
 -- Bitmap画像からRGBAのバイト列を取得
@@ -130,7 +130,7 @@ getRGBAfromDynamicImage img = imgVecW8
 -- 魚眼変換
 --------------------------
 
--- 画像の魚眼変換
+--魚眼画像の更新
 updateFisheye :: AppState -> AppState
 updateFisheye app = app'
   where
@@ -138,7 +138,7 @@ updateFisheye app = app'
     h = _H app
     -- 魚眼変換の関数に状態を部分適用
     fisheye' = fisheye app
-    -- 全画素の 魚眼変換の 32ビットRGBA値を リスト → Vector → ByteString に変換
+    -- 全画素の、魚眼変換の、32ビットRGBA値を、リスト → Vector → ByteString に変換
     dstData = vectorToByteString ( V.fromList (map fisheye' [0..h*w-1]) )
     dstData' = BL.toStrict dstData -- BL.ByteString → ふつうのByteString
     -- ByteStringから画像を生成
@@ -153,35 +153,35 @@ vectorToByteString vec = BB.toLazyByteString $ mconcat $ map BB.word32BE $ V.toL
 fisheye :: AppState -> Int -> Word32
 fisheye app n = c
   where
-    rad = _R app
-    d   = _D app
     w   = fromIntegral (_W app)
     h   = fromIntegral (_H app)
-    --  写像後の座標 (x, y)
-    x   = fromIntegral (n `mod` _W app)
-    y   = fromIntegral (n `div` _W app)
+    rad = _R app
+    d   = _D app
     x0  = _x0 app
     y0  = _y0 app
+    --  写像後の座標 (x', y')
+    x'  = fromIntegral (n `mod` _W app)
+    y'  = fromIntegral (n `div` _W app)
     -- レンズの中心からの相対座標
-    dx = x - x0
-    dy = y - y0
+    dx = x' - x0
+    dy = y' - y0
     d' = sqrt (dx*dx + dy*dy)
 
     c =
       if d' < rad then
         -- 写像:元画像→魚眼画像
-        -- X = R*x/√(D^2+x^2+y^2)
-        -- Y = R*y/√(D^2+x^2+y^2)
+        -- x' = R*x/√(D^2+x^2+y^2)
+        -- y' = R*y/√(D^2+x^2+y^2)
         -- 逆写像:魚眼画像→元画像
-        -- x = D*X/√(R^2-X^2-Y^2)
-        -- y = D*Y/√(R^2-X^2-Y^2)
+        -- x = D*X/√(R^2-x'^2-y'^2)
+        -- y = D*Y/√(R^2-x'^2-y'^2)
         let z = sqrt (rad*rad - dx*dx - dy*dy);
-            x' = x0 + (d * dx) / z;
-            y' = y0 + (d * dy) / z;
+            x = x0 + (d * dx) / z;
+            y = y0 + (d * dy) / z;
         in
-        if x' >= 0 && x' < w && y' >= 0 && y' < h then
+        if x >= 0 && x < w && y >= 0 && y < h then
           -- 元画像から線形補間で色を取得
-          interpolation app (x', y')
+          interpolation app (x, y) -- 写像前の座標 (x, y)
         else
           _black  -- 元画像の外側なら黒塗り
       else
@@ -195,17 +195,17 @@ interpolation :: AppState -> (Float, Float) -> Word32
 interpolation app (x, y) = c
   where
     -- 座標の整数部
-    x' = truncate x
-    y' = truncate y
+    ix = truncate x
+    iy = truncate y
     -- 近傍の4点
-    n4 = [getPixel app (x' + i, y' + j) | j <- [0..1], i <- [0..1]]
+    n4 = [getPixel app (ix + i, iy + j) | j <- [0..1], i <- [0..1]]
     (r00, g00, b00) = head n4 -- n4 !! 0
     (r10, g10, b10) = n4 !! 1
     (r01, g01, b01) = n4 !! 2
     (r11, g11, b11) = n4 !! 3
     -- 座標の小数部とその補数
-    dX = x - fromIntegral x';
-    dY = y - fromIntegral y';
+    dX = x - fromIntegral ix;
+    dY = y - fromIntegral iy;
     mdX = 1 - dX;
     mdY = 1 - dY;
     -- 線形補間
@@ -240,7 +240,7 @@ main = do
   let srcData = getRGBAfromDynamicImage srcImg
 
   -- 画像のサイズ
-  let w = dynamicMap imageWidth srcImg
+  let w = dynamicMap imageWidth  srcImg
       h = dynamicMap imageHeight srcImg
       r = fromIntegral w * 0.6
       d = r * 0.3 -- 小さいほど大きく歪む
@@ -260,4 +260,4 @@ main = do
   -- playモードを実行 (イベントと時間による状態遷移あり)
   -- 引数: ウィンドウ, 1秒あたりのステップ数, 初期状態, 
   --       状態の描画関数, イベントによる状態遷移関数, 時間による状態遷移関数
-  play window white 10 initialState' onDraw onEvents onTimer
+  play window white 20 initialState' onDraw onEvents onTimer
