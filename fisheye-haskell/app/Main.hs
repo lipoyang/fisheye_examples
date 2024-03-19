@@ -252,7 +252,7 @@ main = do
   -- アプリケーションの初期状態  (※ dstImgの初期値はダミー)
   let initialState = AppState w h r d x0 y0 0 0 srcData (rectangleSolid 1 1) False
   
-  -- 助期状態の魚眼画像を計算
+  -- 初期状態の魚眼画像を計算
   let initialState' = updateFisheye initialState
 
   -- printf "W:%d, H:%d, R:%.1f D:%.1f x0:%.1f y0:%.1f\n" w h r d x0 y0

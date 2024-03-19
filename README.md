@@ -59,7 +59,7 @@
 - 画像データのRGBA値が並んだ一次元配列 Vec<u8> は static mut で定義し、unsafe で処理している。
 
 ## Haskell
-- Stack 2.13.1 / GHC 9.4.8 (x86_64) で作成/動作確認 (Windows版アプリ)
+- Stack 2.13.1 / GHC 9.6.4 (x86_64) で作成/動作確認 (Windows版アプリ)
 - グラフィックライブラリは gloss を使用
 - glossは、GLUT(OpenGL Utility Toolkit) に依存しているので、Windows用に freeglut.dll を使用
 - 写像元の画像データは、RGBA値が並んだ一次元配列 Vector Word8 で取得
