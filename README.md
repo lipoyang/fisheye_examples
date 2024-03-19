@@ -61,5 +61,6 @@
 ## Haskell
 - Stack 2.13.1 / GHC 9.4.8 (x86_64) で作成/動作確認 (Windows版アプリ)
 - グラフィックライブラリは gloss を使用
+- glossは、GLUT(OpenGL Utility Toolkit) に依存しているので、Windows用に freeglut.dll を使用
 - 写像元の画像データは、RGBA値が並んだ一次元配列 Vector Word8 で取得
 - 写像先の画像データは、写像関数を map で処理してRGBA値のリスト \[Word32\] を得て、それをバイト列 ByteString に変換
