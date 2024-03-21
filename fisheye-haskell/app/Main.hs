@@ -7,7 +7,7 @@ import Data.Word (Word8, Word32)
 -- import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BB
 import qualified Data.ByteString.Lazy as BL
-import qualified Data.Vector as V
+-- import qualified Data.Vector as V
 import qualified Data.Vector.Storable as VS
 -- import Text.Printf (printf) -- デバッグ用
 -- import Debug.Trace (trace)  -- デバッグ用
@@ -138,16 +138,16 @@ updateFisheye app = app'
     h = _H app
     -- 魚眼変換の関数に状態を部分適用
     fisheye' = fisheye app
-    -- 全画素の、魚眼変換の、32ビットRGBA値を、リスト → Vector → ByteString に変換
-    dstData = vectorToByteString ( V.fromList (map fisheye' [0..h*w-1]) )
+    -- 全画素の、魚眼変換の、32ビットRGBA値を、リスト → ByteString に変換
+    dstData = listToByteString (map fisheye' [0..h*w-1])
     dstData' = BL.toStrict dstData -- BL.ByteString → ふつうのByteString
     -- ByteStringから画像を生成
     img = bitmapOfByteString w h (BitmapFormat TopToBottom PxRGBA) dstData' True
     app' = app{_dstImg = img}
 
--- Vector Word32 を BL.ByteStringに変換 (ビッグエンディアン)
-vectorToByteString :: V.Vector Word32 -> BL.ByteString
-vectorToByteString vec = BB.toLazyByteString $ mconcat $ map BB.word32BE $ V.toList vec
+-- [Word32] を BL.ByteStringに変換 (ビッグエンディアン)
+listToByteString :: [Word32] -> BL.ByteString
+listToByteString list = BB.toLazyByteString $ mconcat $ map BB.word32BE list
 
 -- 魚眼変換の計算： n番目の画素 -> 32ビットRGBA値
 fisheye :: AppState -> Int -> Word32
