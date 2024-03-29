@@ -16,6 +16,7 @@
 - [JavaScript](./fisheye_js)
 - [C#](./fisheye_cs)
 - [Python](./fisheye_python/)
+- [Ruby](./fisheye_ruby/)
 - [Java (Android)](./fisheye_android/)
 - [C++ (Qt)](./fisheye_qt/)
 - [Rust (WebAssembly)](./fisheye_rust/)
@@ -36,10 +37,17 @@
 - GetPixel / SetPixel は遅いので、高速化のため LockBits を使用し、画像全体のRGB値が並んだbyte型一次元配列を unsafe でポインタを使って処理している。
 
 ## Python
-- Python 3.10.0 で動作確認
+- Windows版 Python 3.10.0 で動作確認
 - GUIツールキットは Tkinter を使用、 画像の扱いには Pillow を使用
 - 配列の処理には NumPy を使用し、Numba によるJITコンパイルで高速化
 - NumPy と Numba を用いない方法では十分な処理速度が得られなかった。→ [fisheye_TOO_SLOW.py](./fisheye_python/fisheye_TOO_SLOW.py)
+
+## Ruby
+- Windows版 Ruby 3.2.3 で動作確認 (YJIT はWindows版が未対応のため未検証)
+- 2Dゲームライブラリ Gosu を使用、 画像の扱いには chunky_png を使用
+- Rubyのみによる実装では十分な処理速度が得られなかった。→ [fisheye_ALL_Ruby.rb](./fisheye_ruby/fisheye_ALL_Ruby.rb)
+- 魚眼変換の演算をC言語で実装し、Fiddle でC言語の関数を呼び出している。
+- C言語のコードは Windows の mingw-w64-x86_64-clang で共有ライブラリ(.so)にコンパイル
 
 ## Java (Android)
 - Android Studio Electric Eel で作成/動作確認 (最小APIレベル 24)
