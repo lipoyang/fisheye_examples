@@ -44,7 +44,7 @@
 
 ## Ruby
 - Windows版 Ruby 3.2.3 で動作確認 (YJIT はWindows版が未対応のため未検証)
-- 2Dゲームライブラリ Gosu を使用、 画像の扱いには chunky_png を使用
+- 2Dゲームライブラリ Gosu を使用、 画像の読み込みには chunky_png を使用
 - Rubyのみによる実装では十分な処理速度が得られなかった。→ [fisheye_ALL_Ruby.rb](./fisheye_ruby/fisheye_ALL_Ruby.rb)
 - 魚眼変換の演算をC言語で実装し、Fiddle でC言語の関数を呼び出している。
 - C言語のコードは Windows の mingw-w64-x86_64-clang で共有ライブラリ(.so)にコンパイル
