@@ -18,6 +18,7 @@
 - [Python](./fisheye_python/)
 - [Ruby](./fisheye_ruby/)
 - [Java (Android)](./fisheye_android/)
+- [Kotlin (Android)](./fisheye_kotlin/)
 - [C++ (Qt)](./fisheye_qt/)
 - [Rust (WebAssembly)](./fisheye_rust/)
 - [Haskell](./fisheye-haskell/)
@@ -50,10 +51,14 @@
 - C言語のコードは Windows の mingw-w64-x86_64-clang で共有ライブラリ(.so)にコンパイル
 
 ## Java (Android)
-- Android Studio Electric Eel で作成/動作確認 (最小APIレベル 24)
+- Android Studio Electric Eel で作成/動作確認 (APIレベル 33 / 最小APIレベル 24)
 - getPixel / setPixel は遅いので、getPixels / setPixels で一次元配列にまとめて取得/設定している。
 - Math.sqrt, Math.round, Color.argb, Color.red などは遅いので、自前で演算している。
 - 画面のスケーリングに注意
+
+## Kotlin (Android)
+- Android Studio Electric Eel で作成/動作確認 (APIレベル 34 / 最小APIレベル 24)
+- 上記のJava版の同等のコード
 
 ## C++ (Qt)
 - Qt Creator 12.0.2 / Qt 6.6.0 (MSVC 2019, x86_64) で作成/動作確認
