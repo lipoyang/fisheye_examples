@@ -3,6 +3,7 @@ package com.example.fisheye
 import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 
@@ -120,6 +121,8 @@ class FisheyeView @JvmOverloads constructor(
     }
     // 描画
     private fun draw() {
+        // val startTime = System.currentTimeMillis()
+
         // 写像後の座標
         for (Y in 0 until H2) {
             val Y_offset = Y * W2
@@ -152,6 +155,9 @@ class FisheyeView @JvmOverloads constructor(
             }
         }
         dstImg.setPixels(dstData, 0, W2, 0, 0, W2, H2)
+
+        // val elapsedTime = System.currentTimeMillis() - startTime
+        // Log.d("draw", "time: $elapsedTime msec")
     }
     // 線形補間
     private fun interpolation(x: Float, y: Float): Int {
