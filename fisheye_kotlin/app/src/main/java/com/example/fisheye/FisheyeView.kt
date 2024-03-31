@@ -12,7 +12,8 @@ class FisheyeView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyle: Int = 0
-) : View(context, attrs, defStyle) {
+) : View(context, attrs, defStyle)
+{
     private lateinit var srcImg: Bitmap // 元画像
     private lateinit var srcData: IntArray
     private lateinit var dstImg: Bitmap // 処理後の画像
@@ -23,12 +24,14 @@ class FisheyeView @JvmOverloads constructor(
     private var D: Float = 0f // レンズの中心から投影面までの距離
     private var x0: Int = 0 // レンズの中心座標
     private var y0: Int = 0
+
     private val BLACK: Int = Color.argb(255, 0, 0, 0) // 黒色
     private var x0_prev: Int = 0 // レンズの中心座標の前回値
     private var y0_prev: Int = 0
     private var W2: Int = 0 // 表示サイズ (画像サイズより画面が小さい場合があるため)
     private var H2: Int = 0
-    private var mag: Float = 0f // 倍率 (画像横幅 / 表示横幅)
+
+    private var mag: Float  = 0f // 倍率 (画像横幅 / 表示横幅)
     private var mag2: Float = 0f // 倍率 (画面横幅 / 表示横幅)
 
     // 線形補間用のバッファ (高速化のためグローバル変数に)
@@ -36,12 +39,8 @@ class FisheyeView @JvmOverloads constructor(
     private val _G = Array(2) { FloatArray(2) }
     private val _B = Array(2) { FloatArray(2) }
 
-    init {
-        init()
-    }
-
     // 初期化
-    private fun init() {
+    init {
         // 画像読み込み
         val options = BitmapFactory.Options()
         options.inScaled = false // スケーリングせずドットバイドットで
@@ -102,9 +101,9 @@ class FisheyeView @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE, MotionEvent.ACTION_UP -> {
                 x0 = (event.x / mag2).toInt()
                 y0 = (event.y / mag2).toInt()
-                if (x0 < 0) x0 = 0
+                if (x0 <  0 ) x0 = 0
                 if (x0 >= W2) x0 = W2 - 1
-                if (y0 < 0) y0 = 0
+                if (y0 <  0 ) y0 = 0
                 if (y0 >= H2) y0 = H2 - 1
                 // レンズの中心座標が変化していなければ描画しない
                 if ((x0 == x0_prev) && (y0 == y0_prev)) {
@@ -119,6 +118,7 @@ class FisheyeView @JvmOverloads constructor(
         }
         return super.onTouchEvent(event)
     }
+
     // 描画
     private fun draw() {
         // val startTime = System.currentTimeMillis()
@@ -159,20 +159,19 @@ class FisheyeView @JvmOverloads constructor(
         // val elapsedTime = System.currentTimeMillis() - startTime
         // Log.d("draw", "time: $elapsedTime msec")
     }
+
     // 線形補間
     private fun interpolation(x: Float, y: Float): Int {
         val X = x.toInt()
         val Y = y.toInt()
         for (i in 0..1) {
             for (j in 0..1) {
-                var _x = X + i
-                if (_x >= W) _x = X
-                var _y = Y + j
-                if (_y >= H) _y = Y
+                var _x = X + i; if (_x >= W) _x = X
+                var _y = Y + j; if (_y >= H) _y = Y
                 val c = srcData[_y * W + _x]
                 _R[i][j] = ((c shr 16) and 0xFF).toFloat()
-                _G[i][j] = ((c shr 8) and 0xFF).toFloat()
-                _B[i][j] = (c and 0xFF).toFloat()
+                _G[i][j] = ((c shr  8) and 0xFF).toFloat()
+                _B[i][j] =  (c         and 0xFF).toFloat()
             }
         }
         val dX = x - X.toFloat()
